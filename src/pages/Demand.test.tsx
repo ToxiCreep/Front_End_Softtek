@@ -7,6 +7,24 @@ import Demand from './Demand'
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
+it('usa las unidades a pedir en el pedido sugerido, no el stock total recomendado', async () => {
+  const data: Record<string, unknown> = {
+    '/productos': [{ id: 1, nombre: 'Leche', stockActual: 25 }],
+    '/configuracion': { proveedorIA: 0 },
+    '/predicciones/comparar': [{ fecha: '2026-10-11', base: { cantidadPredicha: 10 }, ia: null }],
+    '/inventario/reabasto': [{ productoId: 1, stockRecomendado: 30, cantidadAPedir: 5, fechaObjetivo: '2026-10-11' }],
+    '/predicciones': [], '/predicciones/precision': { modelos: [] },
+  }
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(data[new URL(url, 'http://localhost').pathname.replace('/api/v1', '')]))))
+  const { container } = render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter><Demand /></MemoryRouter></QueryClientProvider>)
+  await screen.findByRole('heading', { name: 'Existencias y demanda' })
+  const chart = within(container.querySelector('.demand-chart') as HTMLElement)
+  const pedido = within(chart.getByText('Pedido sugerido').closest('li')!)
+  expect(await pedido.findByText('5 unidades')).toBeTruthy()
+  expect(pedido.queryByText('30 unidades')).toBeNull()
+  expect(screen.getByText('Pedido sugerido', { selector: 'dt' }).nextElementSibling?.textContent).toBe('5 unidades')
+})
+
 it('identifica un pronóstico parcial sin completar los días desconocidos con cero', async () => {
   const data: Record<string, unknown> = {
     '/productos': [{ id: 1, nombre: 'Leche', stockActual: 5 }],
