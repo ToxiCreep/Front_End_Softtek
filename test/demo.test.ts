@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { changeStock, changePromotion, products, promotions, summarize, sales } from './demo'
-import { shiftDate, today } from './api'
+import { changeStock, changePromotion, products, promotions, summarize, sales } from './fixtures/demo'
+import { shiftDate, today } from '../src/api'
 
 describe('reglas de la API simulada', () => {
   it('rechaza retirar más existencias de las disponibles sin cambiar el producto', () => {

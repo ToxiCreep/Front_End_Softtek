@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, Route, Routes, Link, useLocation } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Box, ChartNoAxesCombined, ChevronRight, CircleHelp, Home, ReceiptText, Settings2, Sparkles, Store, Tag, WifiOff } from 'lucide-react'
-import { api, today, useMocks } from './api'
+import { api, today } from './api'
 import type { Schema } from './api'
 import { Modal, useOnline } from './ui'
 import Dashboard from './pages/Dashboard'
@@ -71,7 +71,6 @@ export default function App() {
         ['2', 'Revisa tus productos', 'Busca un producto, consulta cuántas unidades quedan o agrega las que recibiste.'],
         ['3', 'Decide sobre las promociones', 'Lee por qué se recomienda una promoción. Tú decides si la activas.'],
       ].map(([step, title, text]) => <div key={step}><span>{step}</span><div><h3>{title}</h3><p>{text}</p></div></div>)}</div>
-      {useMocks && <p className="form-note">Datos de ejemplo. Los cambios se reinician al reiniciar el servidor.</p>}
       <div className="modal-actions"><button className="button primary" onClick={() => setHelp(false)}>Entendido</button></div>
     </Modal>}
   </div>

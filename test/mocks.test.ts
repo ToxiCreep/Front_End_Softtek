@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { setupServer } from 'msw/node'
-import { configuration, products, promotions, sales } from './demo'
+import { configuration, products, promotions, sales } from './fixtures/demo'
 
 vi.hoisted(() => vi.stubEnv('VITE_API_BASE_URL', 'http://localhost/api/v1'))
-const { handlers } = await import('./mocks')
+const { handlers } = await import('./fixtures/mocks')
 const server = setupServer(...handlers)
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterAll(() => { server.close(); vi.unstubAllEnvs() })

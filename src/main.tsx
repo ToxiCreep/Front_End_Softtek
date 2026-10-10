@@ -2,7 +2,6 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router'
-import { useMocks } from './api'
 import App from './App'
 import { SoftyProvider } from './Softy'
 import './styles.css'
@@ -12,9 +11,10 @@ async function start() {
   if ('serviceWorker' in navigator) {
     const registrations = await navigator.serviceWorker.getRegistrations()
     for (const registration of registrations) {
+      // Limpia el worker de MSW que pudo quedar registrado en navegadores que usaron la demo.
       if (registration.active?.scriptURL.endsWith('/mockServiceWorker.js')) await registration.unregister()
     }
-    if (import.meta.env.PROD && !useMocks) await navigator.serviceWorker.register('/sw.js')
+    if (import.meta.env.PROD) await navigator.serviceWorker.register('/sw.js')
   }
   createRoot(document.getElementById('root')!).render(
     <React.StrictMode><QueryClientProvider client={client}><BrowserRouter><SoftyProvider><App /></SoftyProvider></BrowserRouter></QueryClientProvider></React.StrictMode>,

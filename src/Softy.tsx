@@ -8,7 +8,7 @@ import type { ComponentRendererProps } from '../vendor/maya-portable/src/react/A
 import { normalizeA2UIScreen } from '../vendor/maya-portable/src/core/protocol.js'
 import type { A2UIScreen, HistoryItem, MayaAction } from '../vendor/maya-portable/src/core/types.js'
 import type { MayaClient } from '../vendor/maya-portable/src/browser/client.js'
-import { api, useMocks, type Schema } from './api'
+import { api, type Schema } from './api'
 import { appRoutes, writeActions, type ActionReview } from './softy-contract'
 import { Modal, Notice, PageTitle, useOnline } from './ui'
 import '../vendor/maya-portable/src/react/styles.css'
@@ -47,7 +47,7 @@ export function SoftyProvider({ children, modelClient = client }: { children: Re
     const userMessage = message.trim() || `Acción confirmada: ${action!.type}`
     try {
       const screen = await modelClient.process({ message: userMessage, history: conversation.history.slice(-22), screen: conversation.screen,
-        context: { page: contextPage.current, dataMode: useMocks ? 'simulated' : 'spring-boot', ...(operationId ? { operationId } : {}) }, action }, AbortSignal.timeout(300_000))
+        context: { page: contextPage.current, ...(operationId ? { operationId } : {}) }, action }, AbortSignal.timeout(300_000))
       setConversation({ screen, history: [...conversation.history, { role: 'user', content: userMessage } as HistoryItem, { role: 'assistant', content: screen.assistantMessage } as HistoryItem].slice(-24) })
       return true
     } catch (cause) {
@@ -120,7 +120,6 @@ export default function Softy() {
         {(softy.error || actionError) && <Notice error message={softy.error || actionError} />}
         {softy.loading && <p className="softy-working" role="status">Softy está consultando tu sucursal…</p>}
         {preparing && <p className="softy-working" role="status">Preparando los datos para que los revises…</p>}
-        {softy.screen && useMocks && <p className="field-help">Datos de ejemplo de la sucursal.</p>}
         {softy.screen ? <><p className="softy-answer">{softy.screen.assistantMessage}</p><A2UIRenderer key={softy.screen.screenId} screen={softy.screen} loading={disabled || voice.listening} onAction={action => { void onAction(action) }} components={{ StockForm: BusinessForm, SaleForm: BusinessForm }} />{softy.screen.suggestedPrompts?.length ? <div className="softy-suggestions">{softy.screen.suggestedPrompts.map((prompt, i) => <button className="button outlined" disabled={disabled || voice.listening} key={i} onClick={() => { void softy.send(prompt) }}>{prompt}</button>)}</div> : null}</> : <div className="panel softy-start"><Sparkles size={32} aria-hidden="true" /><h2>Empieza con una pregunta</h2><div className="softy-suggestions">{['¿Qué productos necesito reponer?', 'Muéstrame las ventas de los últimos 7 días', 'Quiero agregar existencias'].map(prompt => <button key={prompt} className="button outlined" disabled={disabled || voice.listening} onClick={() => { void softy.send(prompt) }}>{prompt}</button>)}</div></div>}
       </section>
     </div>

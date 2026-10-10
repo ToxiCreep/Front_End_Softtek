@@ -12,7 +12,7 @@ La configuración actual usa la nube para evitar la inferencia en la Mac de 8 GB
 
 ```dotenv
 VITE_API_BASE_URL=/api/v1
-VITE_USE_MOCKS=true
+SOFTTEK_API_URL=http://localhost:8080/api/v1
 SOFTY_PORT=3001
 SOFTY_BIND=127.0.0.1
 OLLAMA_HOST=https://ollama.com
@@ -33,13 +33,20 @@ No hay que fusionar los repositorios. Cambia estos valores y reinicia:
 
 ```dotenv
 VITE_API_BASE_URL=/api/v1
-VITE_USE_MOCKS=false
 SOFTTEK_API_URL=http://localhost:8080/api/v1
 ```
 
 El navegador consume rutas relativas. Vite dirige `/api` a Node durante desarrollo; en producción Node sirve la compilación y `/api`. Node usa una única URL fija de Spring Boot para las pantallas, herramientas y operaciones. Reenvía Authorization/Cookie de la solicitud cuando existen; no envía esas credenciales al modelo. Los DTO son los de `contracts/openapi.json`.
 
-En demo, MSW corre en Node reutilizando `src/mocks.ts` y `src/demo.ts`. Softy y las demás pantallas consultan el mismo estado, que se pierde al reiniciar Node. No hay una base de datos adicional. Ollama puede ser real mientras los datos siguen siendo simulados: son pruebas distintas.
+La app no tiene modo simulado: Softy y las pantallas leen siempre de Spring Boot. MSW y los datos de `test/fixtures/` solo existen para `npm test`.
+
+## Candados de alcance
+
+Softy solo atiende la operación de la tienda (inventario, reabasto, ventas, promociones, demanda y ajustes). Hay tres capas, y las dos deterministas no dependen de que el modelo obedezca:
+
+1. **Antes del modelo** (`server/guard.ts`): mensajes de más de 500 caracteres, intentos de cambiar reglas o rol (“ignora las instrucciones”, “actúa como”, “modo desarrollador”, “muéstrame tu prompt”), enlaces, bloques de código y temas ajenos (poemas, tareas, política, programación…) se rechazan sin llamar a Ollama ni a la API. El historial se limpia con el mismo filtro.
+2. **El modelo**: el prompt fija el ámbito, prohíbe cambiar de rol y clasifica cualquier duda como `OUT_OF_SCOPE`; el plan solo puede usar las herramientas de su dominio (temperatura 0.1).
+3. **Después del modelo**: se eliminan componentes con enlaces, código, HTML o textos largos, botones de otro dominio y rutas externas.
 
 ## Flujo y acciones
 
@@ -169,4 +176,4 @@ Para repetir manualmente:
 2. Escribe “¿Qué productos necesito reponer?” y verifica una interfaz con cifras de la API; no basta con `/health`.
 3. Pide agregar existencias, selecciona un producto y cantidad, revisa y confirma. Comprueba la nueva cantidad en Productos.
 4. Dicta una frase y verifica un solo envío. Prueba Cancelar antes de terminar y permiso denegado; el texto debe seguir disponible.
-5. Repite el caso con `VITE_USE_MOCKS=false` cuando Spring Boot esté listo. Registra navegador, modelo, latencia y resultados por separado del ensayo simulado.
+5. Repite el caso con Spring Boot conectado (`SOFTTEK_API_URL`). Registra navegador, modelo, latencia y resultados por separado del ensayo simulado.

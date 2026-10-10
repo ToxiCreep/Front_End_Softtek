@@ -1,5 +1,5 @@
-import type { Schema } from './api'
-import { shiftDate, today } from './api'
+import type { Schema } from '../../src/api'
+import { shiftDate, today } from '../../src/api'
 
 type Product = Schema['Producto']
 type Promotion = Schema['Promocion']

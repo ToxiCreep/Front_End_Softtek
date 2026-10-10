@@ -1,6 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
-import { apiBase, iaProviders, shiftDate, today } from './api'
-import type { Schema } from './api'
+import { apiBase, iaProviders, shiftDate, today } from '../../src/api'
+import type { Schema } from '../../src/api'
 import { alerts, changePromotion, changeStock, configuration, generatePredictions, inventoryState, movements, predictions, products, promotions, sales, summarize } from './demo'
 
 const error = (mensaje: string, status = 422) => HttpResponse.json({ status, error: status === 409 ? 'CONFLICTO' : 'REGLA_NEGOCIO', mensaje, campos: {} }, { status })

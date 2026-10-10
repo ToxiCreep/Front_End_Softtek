@@ -5,14 +5,8 @@ import { createOllamaProvider } from '../vendor/maya-portable/src/core/index.js'
 import { createHost } from './host.js'
 import { createSoftyRouter } from './softy.js'
 
-const mocks = process.env.VITE_USE_MOCKS !== 'false'
-const base = mocks ? 'http://softtek.internal/api/v1' : process.env.SOFTTEK_API_URL?.replace(/\/$/, '')
-if (!base) throw new Error('Configura SOFTTEK_API_URL con la URL de Spring Boot, incluyendo /api/v1.')
-if (mocks) {
-  const { setupServer } = await import('msw/node')
-  const { createHandlers } = await import('../src/mocks.js')
-  setupServer(...createHandlers(base)).listen({ onUnhandledRequest: 'bypass' })
-}
+const base = process.env.SOFTTEK_API_URL?.replace(/\/$/, '')
+if (!base) throw new Error('Configura SOFTTEK_API_URL en .env.local con la URL de Spring Boot, incluyendo /api/v1.')
 const ollamaHost = process.env.OLLAMA_HOST || 'https://ollama.com'
 const cloud = new URL(ollamaHost).hostname === 'ollama.com'
 const defaultModel = cloud ? 'gemma4:31b' : 'gemma3:4b'

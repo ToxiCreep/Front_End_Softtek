@@ -81,7 +81,7 @@ Spring Boot (repositorio del equipo)
           └── Motor BASE/IA (en proceso o servicio interno)
 ```
 
-El navegador solo conoce Spring Boot. Credenciales del motor, claves de IA y base de datos permanecen en el backend. La variable pública propuesta `VITE_API_BASE_URL` incluye `/api/v1`; el cliente añade rutas como `/productos`. `VITE_USE_MOCKS` controla exclusivamente el modo simulado. Ninguna variable `VITE_*` es un secreto.
+El navegador solo conoce Spring Boot. Credenciales del motor, claves de IA y base de datos permanecen en el backend. La variable pública propuesta `VITE_API_BASE_URL` incluye `/api/v1`; el cliente añade rutas como `/productos`. El modo simulado se retiró de la app; MSW solo se usa en las pruebas. Ninguna variable `VITE_*` es un secreto.
 
 ```text
 src/
