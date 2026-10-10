@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Route, Routes, Link, useLocation } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Box, CalendarDays, ChartNoAxesCombined, ChevronRight, CircleHelp, Home, ReceiptText, Settings2, Sparkles, Store, Tag, Users, WifiOff } from 'lucide-react'
+import { Box, CalendarDays, ChartNoAxesCombined, ChevronRight, CircleHelp, Home, ReceiptText, Settings2, Store, Tag, Users, WifiOff } from 'lucide-react'
 import { api, today, useMocks } from './api'
 import type { Schema } from './api'
 import { Modal, useOnline } from './ui'
@@ -62,7 +62,7 @@ export default function App() {
       <header className="topbar">
         <Link to="/" className="mobile-brand" aria-label="Softtek · Ir a Inicio"><img src="/brand/softtek.svg" alt="Softtek" width="96" height="49" /></Link>
         <div className="breadcrumb"><Store size={17} aria-hidden="true" /><span>{configuration.data?.nombreSucursal || 'Mi sucursal'}</span><ChevronRight size={14} aria-hidden="true" /><strong>{location.pathname === '/softy' ? 'Softy' : navigation.find(n => n.to === location.pathname)?.label || 'Inicio'}</strong></div>
-        <div className="topbar-right"><span className="header-date">{date}</span><NavLink to="/softy" className="softy-entry"><Sparkles size={20} aria-hidden="true" /><span>Softy</span></NavLink><button className="help-button" onClick={() => setHelp(true)}><CircleHelp size={19} aria-hidden="true" /><span>Ayuda</span></button></div>
+        <div className="topbar-right"><span className="header-date">{date}</span><NavLink to="/softy" className="softy-entry"><span className="softy-avatar" aria-hidden="true" /><span>Softy</span></NavLink><button className="help-button" onClick={() => setHelp(true)}><CircleHelp size={19} aria-hidden="true" /><span>Ayuda</span></button></div>
       </header>
       {!online && <div className="offline-banner" role="alert"><WifiOff size={19} aria-hidden="true" />Sin conexión. Conéctate para guardar cambios.</div>}
       <main id="main-content" tabIndex={-1}>

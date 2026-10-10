@@ -121,7 +121,7 @@ npm run build:portable
 npm run build:demo
 ```
 
-La suite reúne 85 pruebas del proyecto, integración y paquete. El ZIP se comprobó inicialmente con sus 21 pruebas, compilación, tipos y demo antes de adaptarlo. La regresión de inventario verifica que la herramienta conserve las cifras de la API y solo incluya productos con stock bajo o agotados. La prueba HTTP local del paquete exige esquemas en ambas etapas; la prueba de transporte Cloud comprueba su omisión, la cabecera de autorización y think:false. Se verifica que errores 401/403/429 no provocan reintentos, y que la recuperación del dictado no requiere onend. El servidor verifica también recibos independientes del modelo, deduplicación concurrente y eliminación de botones con cantidades preseleccionadas. Otra regresión conserva la última página de negocio al navegar y recargar sin enviar otra consulta.
+La suite reúne 86 pruebas del proyecto, integración y paquete. El ZIP se comprobó inicialmente con sus 21 pruebas, compilación, tipos y demo antes de adaptarlo. La regresión de inventario verifica que la herramienta conserve las cifras de la API y solo incluya productos con stock bajo o agotados. La prueba HTTP local del paquete exige esquemas en ambas etapas; la prueba de transporte Cloud comprueba su omisión, la cabecera de autorización y think:false. Se verifica que errores 401/403/429 no provocan reintentos, y que la recuperación del dictado no requiere onend. El servidor verifica también recibos independientes del modelo, deduplicación concurrente y eliminación de botones con cantidades preseleccionadas. Otra regresión conserva la última página de negocio al navegar y recargar sin enviar otra consulta.
 
 | Comprobación | Evidencia / alcance |
 | --- | --- |

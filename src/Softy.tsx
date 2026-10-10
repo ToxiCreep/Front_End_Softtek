@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router'
-import { ArrowUp, Mic, Sparkles, Square, X } from 'lucide-react'
+import { ArrowUp, Mic, Square, X } from 'lucide-react'
 import { createMayaClient, MayaHttpError, readMayaResponse } from '../vendor/maya-portable/src/browser/index.js'
 import { A2UIRenderer, useVoiceInput } from '../vendor/maya-portable/src/react/index.js'
 import type { ComponentRendererProps } from '../vendor/maya-portable/src/react/A2UIRenderer.js'
@@ -103,7 +103,7 @@ export default function Softy() {
     <PageTitle title="Softy" description="Dime qué necesitas revisar o hacer en tu sucursal."><button className="text-button" disabled={disabled || voice.listening} onClick={() => { voice.cancel(); softy.reset(); setMessage(''); setActionError('') }}>Nueva conversación</button></PageTitle>
     <div className="softy-layout">
       <section className="panel softy-chat" aria-label="Conversación con Softy">
-        <div className="softy-chat-title"><Sparkles size={22} aria-hidden="true" /><h2>¿En qué te ayudo?</h2></div>
+        <div className="softy-chat-title"><span className="softy-avatar" aria-hidden="true" /><h2>¿En qué te ayudo?</h2></div>
         <form onSubmit={event => { event.preventDefault(); void submit() }} className="stack-form">
           <label htmlFor="softy-message">Tu solicitud</label>
           <textarea id="softy-message" value={voice.listening ? voice.transcript : message} onChange={event => setMessage(event.target.value)} placeholder="Por ejemplo: ¿qué productos necesito reponer?" maxLength={6000} disabled={disabled || voice.listening} rows={3} />
@@ -119,7 +119,7 @@ export default function Softy() {
         {softy.loading && <p className="softy-working" role="status">Softy está consultando tu sucursal…</p>}
         {preparing && <p className="softy-working" role="status">Preparando los datos para que los revises…</p>}
         {softy.screen && useMocks && <p className="field-help">Datos de ejemplo de la sucursal.</p>}
-        {softy.screen ? <><p className="softy-answer">{softy.screen.assistantMessage}</p><A2UIRenderer key={softy.screen.screenId} screen={softy.screen} loading={disabled || voice.listening} onAction={action => { void onAction(action) }} components={{ StockForm: BusinessForm, SaleForm: BusinessForm }} />{softy.screen.suggestedPrompts?.length ? <div className="softy-suggestions">{softy.screen.suggestedPrompts.map((prompt, i) => <button className="button outlined" disabled={disabled || voice.listening} key={i} onClick={() => { void softy.send(prompt) }}>{prompt}</button>)}</div> : null}</> : <div className="panel softy-start"><Sparkles size={32} aria-hidden="true" /><h2>Empieza con una pregunta</h2><div className="softy-suggestions">{['¿Qué productos necesito reponer?', 'Muéstrame las ventas de los últimos 7 días', 'Quiero agregar existencias'].map(prompt => <button key={prompt} className="button outlined" disabled={disabled || voice.listening} onClick={() => { void softy.send(prompt) }}>{prompt}</button>)}</div></div>}
+        {softy.screen ? <><p className="softy-answer">{softy.screen.assistantMessage}</p><A2UIRenderer key={softy.screen.screenId} screen={softy.screen} loading={disabled || voice.listening} onAction={action => { void onAction(action) }} components={{ StockForm: BusinessForm, SaleForm: BusinessForm }} />{softy.screen.suggestedPrompts?.length ? <div className="softy-suggestions">{softy.screen.suggestedPrompts.map((prompt, i) => <button className="button outlined" disabled={disabled || voice.listening} key={i} onClick={() => { void softy.send(prompt) }}>{prompt}</button>)}</div> : null}</> : <div className="panel softy-start"><span className="softy-avatar" aria-hidden="true" /><h2>Empieza con una pregunta</h2><div className="softy-suggestions">{['¿Qué productos necesito reponer?', 'Muéstrame las ventas de los últimos 7 días', 'Quiero agregar existencias'].map(prompt => <button key={prompt} className="button outlined" disabled={disabled || voice.listening} onClick={() => { void softy.send(prompt) }}>{prompt}</button>)}</div></div>}
       </section>
     </div>
     {review && <Modal title={review.title} description={review.description} onClose={() => setReview(null)} busy={softy.loading}>
