@@ -1,0 +1,2640 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Softtek — contrato MVP frontend/backend",
+    "version": "0.1.0",
+    "description": "Propuesta de contrato, pendiente de adopción por equipo. Solo P0; catálogo P1 en docs/API.md. Una sucursal, MXN, JSON camelCase; fechas locales inclusivas y timestamps con zona. Demo controlada con datos sintéticos, autenticación aún pendiente. No implica API implementada."
+  },
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "Ruta relativa; configurar host por entorno."
+    }
+  ],
+  "tags": [
+    {
+      "name": "Configuracion"
+    },
+    {
+      "name": "Productos"
+    },
+    {
+      "name": "Ventas"
+    },
+    {
+      "name": "Inventario"
+    },
+    {
+      "name": "Promociones"
+    },
+    {
+      "name": "Predicciones"
+    },
+    {
+      "name": "Contexto"
+    },
+    {
+      "name": "Dashboard"
+    }
+  ],
+  "paths": {
+    "/configuracion": {
+      "get": {
+        "operationId": "obtenerConfiguracion",
+        "tags": [
+          "Configuracion"
+        ],
+        "summary": "Consultar configuración",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Configuracion"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/configuracion/ia": {
+      "patch": {
+        "operationId": "cambiarIA",
+        "tags": [
+          "Configuracion"
+        ],
+        "summary": "Encender o apagar IA",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Configuracion"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambioIA"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/productos": {
+      "get": {
+        "operationId": "listarProductos",
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Listar productos activos",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Producto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          }
+        },
+        "parameters": [
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "perecedero",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "bajoStock",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "stockActual < stockMinimo"
+          }
+        ]
+      }
+    },
+    "/productos/{id}": {
+      "get": {
+        "operationId": "obtenerProducto",
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Consultar producto",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Producto"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/productos/categorias": {
+      "get": {
+        "operationId": "listarCategorias",
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Categorías activas distintas",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/productos/lote": {
+      "post": {
+        "operationId": "cargarProductos",
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Carga masiva atómica de productos",
+        "responses": {
+          "201": {
+            "description": "Creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CargaResultado"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ProductoAlta"
+                },
+                "minItems": 1,
+                "maxItems": 1000
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ventas": {
+      "post": {
+        "operationId": "registrarVenta",
+        "tags": [
+          "Ventas"
+        ],
+        "summary": "Registrar ticket y disminuir stock",
+        "responses": {
+          "201": {
+            "description": "Creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Venta"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        },
+        "description": "Transacción completa; ticket repetido → 409 sin doble descuento de stock. Aplicar promoción ACTIVA vigente, guardar costo por línea y validar stock conjunto. No reintentar automáticamente.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VentaSolicitud"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ventas/lote": {
+      "post": {
+        "operationId": "cargarVentasHistoricas",
+        "tags": [
+          "Ventas"
+        ],
+        "summary": "Importar líneas históricas sin tocar stock",
+        "responses": {
+          "201": {
+            "description": "Creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CargaResultado"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        },
+        "description": "Importación atómica. No usar promo ni costo actual. Validar claves ticket/lineaTicket.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/VentaHistorica"
+                },
+                "minItems": 1,
+                "maxItems": 1000
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ventas/resumen": {
+      "get": {
+        "operationId": "obtenerResumenVentas",
+        "tags": [
+          "Ventas"
+        ],
+        "summary": "Agregar ventas por periodo o entidad",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumenVentasFila"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          }
+        },
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "agrupar",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "dia",
+                "semana",
+                "mes",
+                "hora",
+                "diaSemana",
+                "producto",
+                "categoria"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/inventario/movimientos": {
+      "post": {
+        "operationId": "registrarMovimiento",
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Registrar movimiento y actualizar stock",
+        "responses": {
+          "201": {
+            "description": "Creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Movimiento"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        },
+        "description": "Movimiento y cambio de stock atómicos. ENTRADA/DEVOLUCION suman, MERMA/CADUCIDAD restan, AJUSTE suma cantidad firmada. No stock negativo ni reembolso implícito.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovimientoSolicitud"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventario/estado": {
+      "get": {
+        "operationId": "obtenerEstadoInventario",
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Estado de productos activos",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InventarioEstado"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventario/alertas": {
+      "get": {
+        "operationId": "listarAlertasInventario",
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Alertas por producto",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InventarioAlerta"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventario/reabasto": {
+      "get": {
+        "operationId": "obtenerReabasto",
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Sugerencias de reabasto vigentes",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Reabasto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Sin predicción disponible, arreglo vacío. Usar modelo resuelto por configuración y última recomendación relevante, sin sumar pedidos de cada día."
+      }
+    },
+    "/inventario/perdidas": {
+      "get": {
+        "operationId": "obtenerPerdidas",
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Pérdidas realizadas por tipo y categoría",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Perdidas"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          }
+        },
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ]
+      }
+    },
+    "/promociones": {
+      "get": {
+        "operationId": "listarPromociones",
+        "tags": [
+          "Promociones"
+        ],
+        "summary": "Listar promociones",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Promocion"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          }
+        },
+        "description": "vigentes=true: ACTIVA e intervalo inclusivo contiene hoy local; false: complemento.",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SUGERIDA",
+                "ACTIVA",
+                "FINALIZADA",
+                "RECHAZADA"
+              ]
+            }
+          },
+          {
+            "name": "origen",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MANUAL",
+                "ALGORITMO",
+                "IA"
+              ]
+            }
+          },
+          {
+            "name": "motivo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SOBRESTOCK",
+                "POR_CADUCAR",
+                "BAJA_ROTACION",
+                "TEMPORADA"
+              ]
+            }
+          },
+          {
+            "name": "productoId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "vigentes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ]
+      }
+    },
+    "/promociones/{id}/estado": {
+      "patch": {
+        "operationId": "cambiarEstadoPromocion",
+        "tags": [
+          "Promociones"
+        ],
+        "summary": "Aceptar, rechazar o finalizar",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Promocion"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        },
+        "description": "SUGERIDA → ACTIVA/RECHAZADA; ACTIVA → FINALIZADA. Activar revalida margen, descuento y solapamiento. Misma transición o cualquier otra → 409.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromocionEstadoSolicitud"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/promociones/generar": {
+      "post": {
+        "operationId": "generarPromociones",
+        "tags": [
+          "Promociones"
+        ],
+        "summary": "Generar sugerencias persistidas",
+        "responses": {
+          "201": {
+            "description": "Creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Promocion"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "description": "AUTO respeta switch. Solicitud IA con switch apagado → 422; fallo motor → 503. Excluir sugerencias equivalentes para evitar duplicados. Validar reglas antes de persistir.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromocionGenerarSolicitud"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/promociones/{id}/resultado": {
+      "get": {
+        "operationId": "obtenerResultadoPromocion",
+        "tags": [
+          "Promociones"
+        ],
+        "summary": "Resultado observado y estimado",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromocionResultado"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/predicciones": {
+      "get": {
+        "operationId": "listarPredicciones",
+        "tags": [
+          "Predicciones"
+        ],
+        "summary": "Últimas predicciones por producto, fecha y modelo",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Prediccion"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          }
+        },
+        "description": "Filtros desde/hasta por fechaObjetivo. Conservar corridas históricas internamente, pero no duplicar series en respuesta.",
+        "parameters": [
+          {
+            "name": "productoId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "modelo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "BASE",
+                "IA"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "/predicciones/generar": {
+      "post": {
+        "operationId": "generarPredicciones",
+        "tags": [
+          "Predicciones"
+        ],
+        "summary": "Generar y guardar una corrida de demanda",
+        "responses": {
+          "201": {
+            "description": "Creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrediccionGeneracion"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "description": "Respuesta síncrona propuesta; máximo 31 días y 200 productos. AUTO respeta switch; IA/AMBOS apagados → 422. Fallo de motor → 503. No reintentar POST automáticamente.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrediccionGenerarSolicitud"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predicciones/comparar": {
+      "get": {
+        "operationId": "compararPredicciones",
+        "tags": [
+          "Predicciones"
+        ],
+        "summary": "Comparar BASE, IA y ventas cerradas",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PrediccionComparacion"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          }
+        },
+        "parameters": [
+          {
+            "name": "productoId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "desde",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ]
+      }
+    },
+    "/contexto/lote": {
+      "post": {
+        "operationId": "cargarContexto",
+        "tags": [
+          "Contexto"
+        ],
+        "summary": "Cargar días nuevos de contexto",
+        "responses": {
+          "201": {
+            "description": "Creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CargaResultado"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "422": {
+            "$ref": "#/components/responses/Error422"
+          }
+        },
+        "description": "Fecha única, duplicados → 409. Carga atómica.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ContextoAlta"
+                },
+                "minItems": 1,
+                "maxItems": 1000
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/resumen": {
+      "get": {
+        "operationId": "obtenerDashboard",
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "KPIs y comparación contra periodo anterior",
+        "responses": {
+          "200": {
+            "description": "Correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResumen"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          }
+        },
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "mensaje": {
+            "type": "string"
+          },
+          "campos": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "error",
+          "mensaje",
+          "campos"
+        ],
+        "description": "Errores comunes. campos siempre presente, incluso vacío."
+      },
+      "Configuracion": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "nombreSucursal": {
+            "type": "string"
+          },
+          "zona": {
+            "type": "string"
+          },
+          "zonaHoraria": {
+            "type": "string",
+            "example": "America/Monterrey"
+          },
+          "tamano": {
+            "type": "string",
+            "enum": [
+              "PEQUENA",
+              "MEDIANA",
+              "GRANDE"
+            ]
+          },
+          "horaApertura": {
+            "type": "string",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          },
+          "horaCierre": {
+            "type": "string",
+            "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+          },
+          "iaHabilitada": {
+            "type": "boolean"
+          },
+          "margenMinimoPromo": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Porcentaje 0–100; fórmula costo × (1 + margen/100).",
+            "maximum": 100
+          },
+          "descuentoMaximo": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "mesesHistorico": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "transaccionesPorEmpleadoHora": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "nombreSucursal",
+          "zona",
+          "zonaHoraria",
+          "tamano",
+          "horaApertura",
+          "horaCierre",
+          "iaHabilitada",
+          "margenMinimoPromo",
+          "descuentoMaximo",
+          "mesesHistorico",
+          "transaccionesPorEmpleadoHora"
+        ]
+      },
+      "CambioIA": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "iaHabilitada": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "iaHabilitada"
+        ]
+      },
+      "ProductoAlta": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sku": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 1
+          },
+          "categoria": {
+            "type": "string",
+            "minLength": 1
+          },
+          "precioVenta": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "costo": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "stockActual": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "stockMinimo": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "stockMaximo": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "leadTimeDias": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "esPerecedero": {
+            "type": "boolean"
+          },
+          "vidaUtilDias": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          }
+        },
+        "required": [
+          "sku",
+          "nombre",
+          "categoria",
+          "precioVenta",
+          "costo",
+          "stockActual",
+          "stockMinimo",
+          "stockMaximo",
+          "leadTimeDias",
+          "esPerecedero"
+        ],
+        "description": "precioVenta > costo; stockMinimo ≤ stockMaximo; vidaUtilDias requerido y no nulo si esPerecedero. Stock inicial registrado como ENTRADA."
+      },
+      "Producto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sku": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 1
+          },
+          "categoria": {
+            "type": "string",
+            "minLength": 1
+          },
+          "precioVenta": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "costo": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "stockActual": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "stockMinimo": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "stockMaximo": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "leadTimeDias": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "esPerecedero": {
+            "type": "boolean"
+          },
+          "vidaUtilDias": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "sku",
+          "nombre",
+          "categoria",
+          "precioVenta",
+          "costo",
+          "stockActual",
+          "stockMinimo",
+          "stockMaximo",
+          "leadTimeDias",
+          "esPerecedero",
+          "vidaUtilDias",
+          "activo"
+        ]
+      },
+      "CargaResultado": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "creados": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "creados"
+        ]
+      },
+      "VentaLineaSolicitud": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productoId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "cantidad": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "precioUnitario": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "productoId",
+          "cantidad"
+        ],
+        "description": "precioUnitario opcional es precio de lista antes de descuento; si se omite, usar precioVenta."
+      },
+      "VentaSolicitud": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fechaHora": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339 con offset o Z; no aceptar instantes sin zona."
+          },
+          "empleadoId": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VentaLineaSolicitud"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "ticket",
+          "fechaHora",
+          "lineas"
+        ]
+      },
+      "VentaLinea": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "lineaTicket": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "productoId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "cantidad": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "precioUnitario": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "costoUnitario": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "descuentoAplicado": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "promocionId": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          },
+          "total": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "lineaTicket",
+          "productoId",
+          "cantidad",
+          "precioUnitario",
+          "costoUnitario",
+          "descuentoAplicado",
+          "promocionId",
+          "total"
+        ],
+        "description": "descuentoAplicado es importe total por línea. total = cantidad × precioUnitario − descuentoAplicado."
+      },
+      "Venta": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ticket": {
+            "type": "string"
+          },
+          "fechaHora": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339 con offset o Z; no aceptar instantes sin zona."
+          },
+          "empleadoId": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VentaLinea"
+            }
+          },
+          "subtotal": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "descuentoTotal": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "total": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "costoTotal": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "margen": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend."
+          }
+        },
+        "required": [
+          "ticket",
+          "fechaHora",
+          "empleadoId",
+          "lineas",
+          "subtotal",
+          "descuentoTotal",
+          "total",
+          "costoTotal",
+          "margen"
+        ]
+      },
+      "VentaHistorica": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lineaTicket": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fechaHora": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339 con offset o Z; no aceptar instantes sin zona."
+          },
+          "productoId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "cantidad": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "precioUnitario": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "costoUnitario": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "descuentoAplicado": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "promocionId": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          },
+          "empleadoId": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          }
+        },
+        "required": [
+          "ticket",
+          "lineaTicket",
+          "fechaHora",
+          "productoId",
+          "cantidad",
+          "precioUnitario",
+          "costoUnitario",
+          "descuentoAplicado"
+        ],
+        "description": "Una línea histórica; no toca stock ni aplica promociones actuales. Duplicados por ticket/lineaTicket → 409; ticket de venta en vivo → 409."
+      },
+      "ResumenVentasFila": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "periodo": {
+            "type": "string"
+          },
+          "productoId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "unidades": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ingresos": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "costo": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "margen": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend."
+          },
+          "tickets": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "periodo",
+          "unidades",
+          "ingresos",
+          "costo",
+          "margen",
+          "tickets"
+        ],
+        "description": "productoId/categoria/nombre solo cuando corresponde a la agrupación. DISTINCT ticket por grupo; sin filas para periodos sin actividad."
+      },
+      "MovimientoSolicitud": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productoId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "ENTRADA",
+              "MERMA",
+              "CADUCIDAD",
+              "AJUSTE",
+              "DEVOLUCION"
+            ]
+          },
+          "cantidad": {
+            "type": "integer",
+            "description": "Positiva; AJUSTE acepta un entero firmado distinto de cero."
+          },
+          "costoTotal": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "motivo": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "productoId",
+          "tipo",
+          "cantidad",
+          "motivo"
+        ]
+      },
+      "Movimiento": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "productoId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339 con offset o Z; no aceptar instantes sin zona."
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "ENTRADA",
+              "MERMA",
+              "CADUCIDAD",
+              "AJUSTE",
+              "DEVOLUCION"
+            ]
+          },
+          "cantidad": {
+            "type": "integer"
+          },
+          "costoTotal": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "stockResultante": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "productoId",
+          "fecha",
+          "tipo",
+          "cantidad",
+          "costoTotal",
+          "motivo",
+          "stockResultante"
+        ],
+        "description": "fecha asignada por el backend. costoTotal es magnitud no negativa. Cambio de stock atómico; no permitir negativo."
+      },
+      "InventarioEstado": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productoId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "stockActual": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "stockMinimo": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "stockMaximo": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "puntoReorden": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "diasCobertura": {
+            "type": "number",
+            "minimum": 0,
+            "nullable": true
+          },
+          "semaforo": {
+            "type": "string",
+            "enum": [
+              "AGOTADO",
+              "BAJO_STOCK",
+              "SOBRESTOCK",
+              "NORMAL"
+            ]
+          }
+        },
+        "required": [
+          "productoId",
+          "sku",
+          "nombre",
+          "categoria",
+          "stockActual",
+          "stockMinimo",
+          "stockMaximo",
+          "puntoReorden",
+          "diasCobertura",
+          "semaforo"
+        ]
+      },
+      "InventarioAlerta": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productoId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "AGOTADO",
+              "BAJO_STOCK",
+              "SOBRESTOCK",
+              "POR_CADUCAR"
+            ]
+          },
+          "stockActual": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "puntoReorden": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          },
+          "diasRestantes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "unidadesEnRiesgo": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          },
+          "estimada": {
+            "type": "boolean"
+          },
+          "mensaje": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "productoId",
+          "sku",
+          "nombre",
+          "tipo",
+          "stockActual",
+          "puntoReorden",
+          "diasRestantes",
+          "unidadesEnRiesgo",
+          "estimada",
+          "mensaje"
+        ],
+        "description": "Sin lotes, POR_CADUCAR lleva estimada=true y unidadesEnRiesgo=null si no verificable. Campos no aplicables null."
+      },
+      "Reabasto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productoId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "stockActual": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "stockRecomendado": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cantidadAPedir": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fechaObjetivo": {
+            "type": "string",
+            "format": "date"
+          },
+          "generadaEn": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339 con offset o Z; no aceptar instantes sin zona."
+          },
+          "modelo": {
+            "type": "string",
+            "enum": [
+              "BASE",
+              "IA"
+            ]
+          }
+        },
+        "required": [
+          "productoId",
+          "sku",
+          "nombre",
+          "stockActual",
+          "stockRecomendado",
+          "cantidadAPedir",
+          "fechaObjetivo",
+          "generadaEn",
+          "modelo"
+        ],
+        "description": "Último plan vigente por producto y modelo resuelto por switch. No sumar cantidadAPedir de cada fecha."
+      },
+      "PerdidaTipo": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "MERMA",
+              "CADUCIDAD"
+            ]
+          },
+          "unidades": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "importe": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "tipo",
+          "unidades",
+          "importe"
+        ]
+      },
+      "PerdidaCategoria": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "categoria": {
+            "type": "string"
+          },
+          "unidades": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "importe": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "categoria",
+          "unidades",
+          "importe"
+        ]
+      },
+      "Perdidas": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "total": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "porTipo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PerdidaTipo"
+            }
+          },
+          "porCategoria": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PerdidaCategoria"
+            }
+          }
+        },
+        "required": [
+          "desde",
+          "hasta",
+          "total",
+          "porTipo",
+          "porCategoria"
+        ],
+        "description": "Solo pérdidas realizadas por MERMA y CADUCIDAD, usando costoTotal guardado. Vacío: total=0 y arreglos vacíos."
+      },
+      "Promocion": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "productoId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "PORCENTAJE",
+              "DOS_X_UNO",
+              "PRECIO_FIJO"
+            ]
+          },
+          "valor": {
+            "type": "number",
+            "minimum": 0
+          },
+          "fechaInicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "fechaFin": {
+            "type": "string",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "SUGERIDA",
+              "ACTIVA",
+              "FINALIZADA",
+              "RECHAZADA"
+            ]
+          },
+          "origen": {
+            "type": "string",
+            "enum": [
+              "MANUAL",
+              "ALGORITMO",
+              "IA"
+            ]
+          },
+          "motivo": {
+            "type": "string",
+            "enum": [
+              "SOBRESTOCK",
+              "POR_CADUCAR",
+              "BAJA_ROTACION",
+              "TEMPORADA"
+            ]
+          },
+          "ventasEsperadas": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          },
+          "ventasReales": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "gananciaEsperada": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "nullable": true
+          },
+          "explicacion": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "productoId",
+          "tipo",
+          "valor",
+          "fechaInicio",
+          "fechaFin",
+          "estado",
+          "origen",
+          "motivo",
+          "ventasEsperadas",
+          "ventasReales",
+          "gananciaEsperada",
+          "explicacion"
+        ],
+        "description": "valor: porcentaje 0–100, MXN por unidad o 2 para DOS_X_UNO. gananciaEsperada es margen bruto esperado. ventasReales se calcula desde ventas."
+      },
+      "PromocionEstadoSolicitud": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ACTIVA",
+              "RECHAZADA",
+              "FINALIZADA"
+            ]
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "PromocionGenerarSolicitud": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productoIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxItems": 200,
+            "uniqueItems": true,
+            "default": []
+          },
+          "modelo": {
+            "type": "string",
+            "enum": [
+              "AUTO",
+              "BASE",
+              "IA"
+            ]
+          }
+        },
+        "required": [
+          "modelo"
+        ],
+        "description": "productoIds omitido o vacío = todos los activos. BASE produce ALGORITMO. Excluir sugerencias equivalentes existentes."
+      },
+      "PromocionResultado": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "promocionId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "ventasEsperadas": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          },
+          "ventasReales": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ingresosReales": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "costoReal": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "margenReal": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend."
+          },
+          "gananciaEsperada": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "nullable": true
+          },
+          "roi": {
+            "type": "number",
+            "description": "Porcentaje; null hasta acordar línea base y fórmula de impacto incremental.",
+            "nullable": true
+          }
+        },
+        "required": [
+          "promocionId",
+          "ventasEsperadas",
+          "ventasReales",
+          "ingresosReales",
+          "costoReal",
+          "margenReal",
+          "gananciaEsperada",
+          "roi"
+        ]
+      },
+      "Prediccion": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "productoId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fechaObjetivo": {
+            "type": "string",
+            "format": "date"
+          },
+          "cantidadPredicha": {
+            "type": "number",
+            "minimum": 0
+          },
+          "limiteInferior": {
+            "type": "number",
+            "minimum": 0,
+            "nullable": true
+          },
+          "limiteSuperior": {
+            "type": "number",
+            "minimum": 0,
+            "nullable": true
+          },
+          "stockRecomendado": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cantidadAPedir": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "modelo": {
+            "type": "string",
+            "enum": [
+              "BASE",
+              "IA"
+            ]
+          },
+          "generadaEn": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339 con offset o Z; no aceptar instantes sin zona."
+          }
+        },
+        "required": [
+          "id",
+          "productoId",
+          "fechaObjetivo",
+          "cantidadPredicha",
+          "limiteInferior",
+          "limiteSuperior",
+          "stockRecomendado",
+          "cantidadAPedir",
+          "modelo",
+          "generadaEn"
+        ]
+      },
+      "PrediccionGenerarSolicitud": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dias": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 31
+          },
+          "productoIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maxItems": 200,
+            "uniqueItems": true,
+            "default": []
+          },
+          "modelo": {
+            "type": "string",
+            "enum": [
+              "AUTO",
+              "BASE",
+              "IA",
+              "AMBOS"
+            ]
+          }
+        },
+        "required": [
+          "dias",
+          "modelo"
+        ],
+        "description": "Comienza mañana en zona de sucursal. productoIds omitido o vacío = todos activos. IA/AMBOS con switch apagado → 422."
+      },
+      "PrediccionGeneracion": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "generadaEn": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339 con offset o Z; no aceptar instantes sin zona."
+          },
+          "predicciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Prediccion"
+            }
+          }
+        },
+        "required": [
+          "generadaEn",
+          "predicciones"
+        ],
+        "description": "Una corrida, mismo generadaEn para BASE/IA. Guardar historia; resultado incluye solo corrida nueva."
+      },
+      "ComparacionModelo": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cantidadPredicha": {
+            "type": "number",
+            "minimum": 0
+          },
+          "generadaEn": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339 con offset o Z; no aceptar instantes sin zona."
+          }
+        },
+        "required": [
+          "cantidadPredicha",
+          "generadaEn"
+        ]
+      },
+      "PrediccionComparacion": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "format": "date"
+          },
+          "productoId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "base": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "cantidadPredicha": {
+                "type": "number",
+                "minimum": 0
+              },
+              "generadaEn": {
+                "type": "string",
+                "format": "date-time",
+                "description": "RFC 3339 con offset o Z; no aceptar instantes sin zona."
+              }
+            },
+            "required": [
+              "cantidadPredicha",
+              "generadaEn"
+            ],
+            "nullable": true
+          },
+          "ia": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "cantidadPredicha": {
+                "type": "number",
+                "minimum": 0
+              },
+              "generadaEn": {
+                "type": "string",
+                "format": "date-time",
+                "description": "RFC 3339 con offset o Z; no aceptar instantes sin zona."
+              }
+            },
+            "required": [
+              "cantidadPredicha",
+              "generadaEn"
+            ],
+            "nullable": true
+          },
+          "ventasReales": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "fecha",
+          "productoId",
+          "base",
+          "ia",
+          "ventasReales"
+        ],
+        "description": "Usar última corrida relevante, preferir BASE/IA de la misma corrida. Modelo ausente null. Ventas de día no cerrado null; día cerrado sin ventas 0."
+      },
+      "ContextoAlta": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "format": "date"
+          },
+          "esFestivo": {
+            "type": "boolean"
+          },
+          "nombreEvento": {
+            "type": "string",
+            "nullable": true
+          },
+          "esQuincena": {
+            "type": "boolean"
+          },
+          "temporada": {
+            "type": "string",
+            "enum": [
+              "REGRESO_CLASES",
+              "NAVIDAD",
+              "VERANO",
+              "NORMAL"
+            ]
+          },
+          "clima": {
+            "type": "string",
+            "nullable": true
+          },
+          "temperatura": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "fecha",
+          "esFestivo",
+          "esQuincena",
+          "temporada"
+        ]
+      },
+      "Metricas": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ingresos": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "costo": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "margen": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend."
+          },
+          "tickets": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unidades": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ticketPromedio": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "perdidas": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          },
+          "ventasPorPromociones": {
+            "type": "number",
+            "description": "MXN; hasta dos decimales, cálculo BigDecimal en backend.",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "ingresos",
+          "costo",
+          "margen",
+          "tickets",
+          "unidades",
+          "ticketPromedio",
+          "perdidas",
+          "ventasPorPromociones"
+        ],
+        "description": "ventasPorPromociones es ingresos de líneas vinculadas a promoción. Ticket promedio cero sin tickets. Pérdidas separadas del margen bruto."
+      },
+      "Variaciones": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ingresos": {
+            "type": "number",
+            "description": "Porcentaje contra periodo anterior; null si anterior=0.",
+            "nullable": true
+          },
+          "costo": {
+            "type": "number",
+            "description": "Porcentaje contra periodo anterior; null si anterior=0.",
+            "nullable": true
+          },
+          "margen": {
+            "type": "number",
+            "description": "Porcentaje contra periodo anterior; null si anterior=0.",
+            "nullable": true
+          },
+          "tickets": {
+            "type": "number",
+            "description": "Porcentaje contra periodo anterior; null si anterior=0.",
+            "nullable": true
+          },
+          "unidades": {
+            "type": "number",
+            "description": "Porcentaje contra periodo anterior; null si anterior=0.",
+            "nullable": true
+          },
+          "ticketPromedio": {
+            "type": "number",
+            "description": "Porcentaje contra periodo anterior; null si anterior=0.",
+            "nullable": true
+          },
+          "perdidas": {
+            "type": "number",
+            "description": "Porcentaje contra periodo anterior; null si anterior=0.",
+            "nullable": true
+          },
+          "ventasPorPromociones": {
+            "type": "number",
+            "description": "Porcentaje contra periodo anterior; null si anterior=0.",
+            "nullable": true
+          }
+        },
+        "required": [
+          "ingresos",
+          "costo",
+          "margen",
+          "tickets",
+          "unidades",
+          "ticketPromedio",
+          "perdidas",
+          "ventasPorPromociones"
+        ]
+      },
+      "Periodo": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "hasta": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "desde",
+          "hasta"
+        ]
+      },
+      "DashboardResumen": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "periodo": {
+            "$ref": "#/components/schemas/Periodo"
+          },
+          "periodoAnterior": {
+            "$ref": "#/components/schemas/Periodo"
+          },
+          "actual": {
+            "$ref": "#/components/schemas/Metricas"
+          },
+          "anterior": {
+            "$ref": "#/components/schemas/Metricas"
+          },
+          "variacionPorcentual": {
+            "$ref": "#/components/schemas/Variaciones"
+          },
+          "generadoEn": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339 con offset o Z; no aceptar instantes sin zona."
+          }
+        },
+        "required": [
+          "periodo",
+          "periodoAnterior",
+          "actual",
+          "anterior",
+          "variacionPorcentual",
+          "generadoEn"
+        ]
+      }
+    },
+    "responses": {
+      "Error400": {
+        "description": "Formato o filtro inválido",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error404": {
+        "description": "Recurso no encontrado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error409": {
+        "description": "Duplicado o conflicto de estado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error422": {
+        "description": "Regla de negocio violada",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error503": {
+        "description": "Motor no disponible",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

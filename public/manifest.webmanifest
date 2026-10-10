@@ -1,0 +1,24 @@
+{
+  "name": "Mi sucursal · Softtek",
+  "short_name": "Mi sucursal",
+  "lang": "es-MX",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#002855",
+  "background_color": "#101112",
+  "icons": [
+    {
+      "src": "/brand/app-icon.png",
+      "sizes": "320x320",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
