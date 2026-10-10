@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Softtek — contrato MVP frontend/backend",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Propuesta de contrato, pendiente de adopción por equipo. Solo P0; catálogo P1 en docs/API.md. Una sucursal, MXN, JSON camelCase; fechas locales inclusivas y timestamps con zona. Demo controlada con datos sintéticos, autenticación aún pendiente. No implica API implementada."
   },
   "servers": [
@@ -65,7 +65,7 @@
         "tags": [
           "Configuracion"
         ],
-        "summary": "Encender o apagar IA",
+        "summary": "Seleccionar proveedor de asistencia inteligente",
         "responses": {
           "200": {
             "description": "Correcto",
@@ -1128,8 +1128,16 @@
             "type": "string",
             "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
           },
-          "iaHabilitada": {
-            "type": "boolean"
+          "proveedorIA": {
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "description": "0 = ninguna, 1 = Gemini, 2 = Claude, 3 = GPT.",
+            "example": 1
           },
           "margenMinimoPromo": {
             "type": "number",
@@ -1158,7 +1166,7 @@
           "tamano",
           "horaApertura",
           "horaCierre",
-          "iaHabilitada",
+          "proveedorIA",
           "margenMinimoPromo",
           "descuentoMaximo",
           "mesesHistorico",
@@ -1169,12 +1177,20 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "iaHabilitada": {
-            "type": "boolean"
+          "proveedorIA": {
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "description": "0 = ninguna, 1 = Gemini, 2 = Claude, 3 = GPT.",
+            "example": 1
           }
         },
         "required": [
-          "iaHabilitada"
+          "proveedorIA"
         ]
       },
       "ProductoAlta": {

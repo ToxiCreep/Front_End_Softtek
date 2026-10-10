@@ -1,8 +1,9 @@
 import type { components } from './api-schema'
 
 export type Schema = components['schemas']
-export const useMocks = import.meta.env.VITE_USE_MOCKS === 'true' || (import.meta.env.DEV && import.meta.env.VITE_USE_MOCKS !== 'false')
-export const apiBase = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
+export const iaProviders = [{ value: 1, label: 'Gemini' }, { value: 2, label: 'Claude' }, { value: 3, label: 'GPT' }, { value: 0, label: 'Ninguna' }] as const
+export const useMocks = import.meta.env?.VITE_USE_MOCKS !== 'false'
+export const apiBase = (import.meta.env?.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const controller = new AbortController()

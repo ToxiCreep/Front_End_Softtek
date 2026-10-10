@@ -1,0 +1,60 @@
+.maya-assistant, .maya-ui {
+  --maya-primary: #4f46e5; --maya-accent-bg: #eef2ff; --maya-border: #dbe1ea;
+  --maya-background: #f8fafc; --maya-text: #172033; --maya-muted: #5c687a;
+  color: var(--maya-text); font-family: system-ui, sans-serif; line-height: 1.5;
+}
+.maya-assistant *, .maya-ui * { box-sizing: border-box; }
+.maya-assistant { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; }
+.maya-canvas { min-width: 0; }
+.maya-chat { padding: 24px; border: 1px solid var(--maya-border); border-radius: 20px; background: white; align-self: start; }
+.maya-assistant h2, .maya-ui h3 { margin: 0 0 8px; }
+.maya-ui { display: flex; flex-direction: column; gap: 16px; }
+.maya-ui p, .maya-chat p { margin: 0; overflow-wrap: anywhere; }
+.maya-ui button, .maya-assistant button { border: 1px solid var(--maya-border); border-radius: 10px; background: white; color: var(--maya-text); padding: 10px 16px; cursor: pointer; font: inherit; }
+.maya-ui button:hover, .maya-assistant button:hover { border-color: var(--maya-primary); }
+.maya-ui button[data-variant="primary"], .maya-ui button[aria-pressed="true"], .maya-chat button[type="submit"] { background: var(--maya-primary); color: white; border-color: var(--maya-primary); }
+.maya-ui button:disabled, .maya-assistant button:disabled { opacity: .5; cursor: default; }
+.maya-assistant :focus-visible, .maya-ui :focus-visible { outline: 3px solid var(--maya-primary); outline-offset: 3px; }
+.maya-card, .maya-stat, .maya-chart { border: 1px solid var(--maya-border); background: white; border-radius: 16px; padding: 20px; margin: 0; }
+.maya-card { display: flex; flex-direction: column; gap: 12px; }
+.maya-card[data-variant="highlight"] { background: var(--maya-accent-bg); border-color: var(--maya-primary); }
+.maya-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.maya-stack { display: flex; flex-direction: column; gap: 16px; }
+.maya-stack[data-direction="horizontal"] { flex-direction: row; flex-wrap: wrap; }
+.maya-stack[data-gap="sm"] { gap: 8px; }
+.maya-stack[data-gap="lg"] { gap: 24px; }
+.maya-section-header { display: flex; gap: 12px; align-items: center; }
+.maya-section-header small { color: var(--maya-primary); }
+.maya-muted { color: var(--maya-muted); }
+.maya-text[data-size="xs"] { font-size: 12px; }
+.maya-text[data-size="lg"] { font-size: 22px; }
+.maya-text[data-color="primary"] { color: var(--maya-primary); }
+.maya-text[data-color="muted"] { color: var(--maya-muted); }
+.maya-stat { display: flex; flex-direction: column; gap: 4px; }
+.maya-stat strong { font-size: 24px; }
+.maya-icon { color: var(--maya-primary); font-size: 24px; }
+.maya-alert { padding: 16px; border: 1px solid var(--maya-border); border-radius: 12px; background: var(--maya-accent-bg); }
+.maya-alert[data-variant="warning"] { background: #fffbeb; color: #92400e; }
+.maya-alert[data-variant="danger"], .maya-error { background: #fff1f2; color: #9f1239; }
+.maya-alert[data-variant="success"] { background: #ecfdf5; color: #065f46; }
+.maya-progress { display: flex; flex-direction: column; gap: 6px; }
+.maya-progress progress { width: 100%; height: 16px; accent-color: var(--maya-primary); }
+.maya-bar-row { display: grid; grid-template-columns: 1fr auto; gap: 4px; margin: 12px 0; }
+.maya-bar-track { grid-column: 1 / -1; height: 10px; background: #eef2f7; border-radius: 10px; overflow: hidden; }
+.maya-bar-track > div { height: 100%; border-radius: inherit; }
+.maya-donut-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
+.maya-donut { width: 160px; height: 160px; position: relative; }
+.maya-donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.maya-donut > div { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+.maya-chart ul { list-style: none; padding: 0; }
+.maya-actions, .maya-suggestions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.maya-suggestions { margin-top: 20px; }
+.maya-input, .maya-chat form, .maya-chat label { display: flex; flex-direction: column; gap: 10px; }
+.maya-input input, .maya-input select, .maya-chat textarea { font: inherit; padding: 12px; border: 1px solid var(--maya-border); border-radius: 10px; width: 100%; }
+.maya-chat textarea { min-height: 110px; resize: vertical; }
+.maya-messages { max-height: 400px; overflow: auto; display: flex; flex-direction: column; gap: 16px; margin: 20px 0; }
+.maya-messages > div[data-role] { padding: 12px; background: var(--maya-background); border-radius: 12px; }
+.maya-messages > div[data-role="user"] { background: var(--maya-accent-bg); }
+.maya-messages small { font-weight: 700; }
+.maya-empty { padding: 60px 24px; text-align: center; color: var(--maya-muted); border: 1px dashed var(--maya-border); border-radius: 16px; }
+@media (max-width: 800px) { .maya-assistant { grid-template-columns: 1fr; } .maya-grid { grid-template-columns: 1fr !important; } }

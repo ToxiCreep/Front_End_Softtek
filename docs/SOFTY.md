@@ -1,0 +1,172 @@
+# Softy: configuración, integración y verificación
+
+Softy es el nombre visible de Maya en Mi sucursal. El motor genera JSON `a2ui_screen`; React dibuja únicamente componentes registrados. No ejecuta código React, HTML ni herramientas propuestas arbitrariamente por el modelo.
+
+## Arrancar con Ollama Cloud y Gemma
+
+La configuración actual usa la nube para evitar la inferencia en la Mac de 8 GB. [Ollama Free](https://ollama.com/pricing) cuesta $0 e incluye créditos iniciales para modelos disponibles en ese plan. La cuota y el acceso de la cuenta deben verificarse; no es uso ilimitado. No comprar créditos ni habilitar recargas si el gasto debe ser cero.
+
+1. Crea una cuenta Free y una [API key](https://ollama.com/settings/keys).
+2. Ejecuta `npm ci`. Crea `.env.local` desde `.env.example` si aún no existe.
+3. Guarda la clave solo en `OLLAMA_API_KEY` y arranca `npm run dev`.
+
+```dotenv
+VITE_API_BASE_URL=/api/v1
+VITE_USE_MOCKS=true
+SOFTY_PORT=3001
+SOFTY_BIND=127.0.0.1
+OLLAMA_HOST=https://ollama.com
+OLLAMA_API_KEY=
+OLLAMA_MODEL=gemma4:31b
+A2UI_MODEL=gemma4:31b
+```
+
+`OLLAMA_MODEL` planifica lecturas y `A2UI_MODEL` genera la interfaz. El modelo `gemma4:31b` se confirmó en la lista pública `https://ollama.com/api/tags`. La [API de nube](https://docs.ollama.com/cloud) usa Bearer desde Node; ni la clave ni las credenciales de Spring se envían al navegador.
+
+Cloud no admite actualmente [structured outputs](https://docs.ollama.com/capabilities/structured-outputs): el proveedor omite `format` y las opciones locales; solicita JSON mediante el contrato del prompt y el motor lo valida antes de renderizar. `think:false` evita generar razonamiento adicional. Clave inválida (401), acceso rechazado (403) y cuota/concurrencia (429) tienen mensajes específicos y no se reintentan automáticamente. No hay fallback a un servicio de pago. La cuenta del proveedor determina la facturación.
+
+Reinicia `npm run dev` después de cambiar `.env.local`. Para volver a local: `OLLAMA_HOST=http://127.0.0.1:11434`, ambos modelos `gemma3:4b` descargados y Ollama abierto; no se necesita clave. Ese camino conserva esquemas JSON y contexto de 8,192 tokens. La Mac inspeccionada presentó fuerte uso de swap y consultas de decenas de segundos; la nube es el modo elegido para la demo.
+
+## Conectar el repositorio del equipo
+
+No hay que fusionar los repositorios. Cambia estos valores y reinicia:
+
+```dotenv
+VITE_API_BASE_URL=/api/v1
+VITE_USE_MOCKS=false
+SOFTTEK_API_URL=http://localhost:8080/api/v1
+```
+
+El navegador consume rutas relativas. Vite dirige `/api` a Node durante desarrollo; en producción Node sirve la compilación y `/api`. Node usa una única URL fija de Spring Boot para las pantallas, herramientas y operaciones. Reenvía Authorization/Cookie de la solicitud cuando existen; no envía esas credenciales al modelo. Los DTO son los de `contracts/openapi.json`.
+
+En demo, MSW corre en Node reutilizando `src/mocks.ts` y `src/demo.ts`. Softy y las demás pantallas consultan el mismo estado, que se pierde al reiniciar Node. No hay una base de datos adicional. Ollama puede ser real mientras los datos siguen siendo simulados: son pruebas distintas.
+
+## Flujo y acciones
+
+Texto o transcripción final → historial, página anterior y pantalla previa → consultas de lectura → JSON validado → renderizado → interacción → revisión de la API → confirmación → operación → recibo A2UI construido por el servidor con la respuesta de la API.
+
+La conversación conserva hasta 24 mensajes y la última pantalla en `sessionStorage`, dentro de la misma pestaña. Navegar conserva el estado y recargar lo restaura; Nueva conversación lo borra. La página de negocio más reciente se mantiene como contexto al entrar en Softy. El servidor pasa al modelo los seis mensajes más recientes (tres turnos) y la pantalla anterior; la configuración se consulta mediante get_branch cuando la solicitud lo requiere. Las reglas de planificación están separadas de las de diseño. El contexto del navegador es informativo: no otorga permisos.
+
+| Herramienta | Datos consultados |
+| --- | --- |
+| `get_branch` | Configuración y límites |
+| `list_products` | Productos, IDs, precios y existencias; filtros `q`/`categoria` |
+| `get_inventory` | Productos con stock bajo o agotados y sus pedidos sugeridos, compactados desde estado y reabasto; excedentes e inventario completo mediante `list_products` |
+| `get_sales` | Indicadores y serie diaria; hasta 31 días |
+| `get_promotions` | Promociones, explicación y estado |
+| `get_demand` | Producto y comparación de estimaciones |
+| `get_product_sales` | Producto y unidades observadas por día; siete días completos por defecto |
+
+Los datos desconocidos permanecen `null`: no se presentan como cero. Las estimaciones nunca se consideran ventas realizadas. Fechas, filtros, identificadores y cantidades se validan en el servidor.
+
+| Acción | Operación del anfitrión |
+| --- | --- |
+| `OPEN_PAGE` | Navegar a Inicio, Productos, Promociones, Demanda o Ajustes |
+| `USER_PROMPT` | Continuar una consulta con el texto o valor actualizado |
+| `FILTER_PRODUCTS` | Consultar productos con el valor editado |
+| `SELECT_PRODUCT` | Consultar demanda con el ID seleccionado |
+| `ADD_STOCK` | POST movimiento ENTRADA con producto, cantidad y motivo |
+| `REGISTER_SALE` | POST venta de un producto con ticket estable |
+| `ACTIVATE_PROMOTION` / `DISMISS_PROMOTION` | PATCH estado ACTIVA / RECHAZADA |
+| `SET_IA` | PATCH configuración de asistencia con `{ proveedorIA }`: 0 ninguna, 1 Gemini, 2 Claude, 3 GPT |
+
+Los formularios `StockForm` y `SaleForm` cargan productos desde el cliente existente, piden valores al usuario y validan cantidades. El servidor retira los ActionButton ADD_STOCK / REGISTER_SALE que genera el modelo: las cantidades se introducen en los formularios del anfitrión. Las cinco acciones de escritura siempre solicitan revisión y confirmación. La revisión utiliza el nombre y estado consultados en la API, no solo texto del modelo. Spring Boot sigue siendo responsable de transacciones, stock final, precio, descuentos, estados y permisos.
+
+Cada revisión recibe un `operationId` generado por Node. Repetir la misma solicitud, incluso concurrentemente, reutiliza su promesa de ejecución. Node envía `Idempotency-Key` y conserva el ticket de venta. Después de guardar, el servidor devuelve un recibo sin llamar al modelo; si la API devuelve stockResultante, se muestra ese valor directamente. Un fallo incierto de la API puede devolver `actionMayHaveRun:true`; la UI advierte y actualiza los datos, sin reenviar automáticamente la escritura. El motor portátil mantiene su manejo de fallos de generación tras acciones para otros anfitriones.
+
+**Límite actual:** recibos en memoria para una instancia Node, podados tras 24 horas al preparar operaciones, con hasta 1,000 revisiones retenidas. Reinicios y varias instancias requieren idempotencia persistente en Spring Boot. La app actual no tiene sesión autenticada; no debe usarse para operaciones públicas sin autorización y permisos del backend. No se introdujo un segundo sistema de autenticación.
+
+## Voz
+
+Se usa `SpeechRecognition` o `webkitSpeechRecognition` del navegador con `es-MX`. Dictar inicia, Terminar cierra el dictado y Cancelar descarta el envío. Los resultados provisionales solo se muestran; la transcripción final se envía una vez al mismo flujo que el texto. Al salir de la vista se limpia el reconocimiento.
+
+Sin soporte, permiso, micrófono o servicio disponible se muestra un mensaje y se conserva la escritura. Un error libera el reconocedor aunque el navegador no emita onend; se puede volver a dictar y un resultado tardío no se envía. El error de red orienta a abrir la misma página en Chrome o Safari con internet; el navegador integrado puede exponer la API sin tener un servicio operativo. Usa localhost o HTTPS y concede el permiso desde tu navegador. La voz es dictado, no conversación de audio continua ni voz de salida. **Web Speech puede usar un servicio remoto del navegador**: configurar Ollama local no convierte el dictado en transcripción offline.
+
+## Implementación y configuración
+
+- `src/Softy.tsx`: cliente del paquete, historial, voz, renderizador y formularios del negocio; usa QueryClient y el Modal existentes.
+- `src/softy.css`: estilos oscuros y marca, controles táctiles, móvil y escritorio.
+- `src/softy-contract.ts`: acciones, páginas y respuesta de revisión compartidas.
+- `server/host.ts`: cliente REST, herramientas de lectura y operaciones canónicas.
+- `server/softy.ts`: validación, contexto, revisiones, deduplicación y motor Maya.
+- `server/index.ts`: Ollama, MSW de demo, proxy de negocio y archivos de producción.
+- `vendor/maya-portable/`: fuentes originales del ZIP. Cambios: `useRef` compatible con React 19, límite de 200 componentes / profundidad 12, esquemas de salida para plan y pantalla y contexto Ollama de 8,192 tokens. React se comparte con la app, sin una segunda instalación en vendor.
+
+El catálogo de Softy contiene Card, Section, Grid, Stack, Text, AlertBanner, StatTile, BarChart, ActionButton, QuickSuggestions, StockForm y SaleForm. El paquete conserva su catálogo general; Softy limita las opciones del modelo para generar interfaces simples. Los formularios del anfitrión seleccionan productos por nombre y piden cantidades, sin mostrar IDs internos. El esquema de salida asegura la estructura; no demuestra por sí solo que la interpretación o los datos del modelo sean correctos.
+
+`SOFTY_PORT` cambia el puerto Node y el destino del proxy Vite. `SOFTY_BIND` limita la escucha; el valor predeterminado es loopback. `SOFTTEK_API_URL` se requiere en modo real. Ningún modelo ni secreto se expone con prefijo `VITE_`. `.env.local` está ignorado por Git. La integración local ya no usa Gemini ni su clave.
+
+Para servir la compilación: `npm run build` y `npm start`; abre `http://127.0.0.1:3001/softy`. Para despliegue conserva las fuentes y dependencias runtime del servidor y usa HTTPS/proxy inverso. Al cambiar el modo de datos, recompila y reinicia para que navegador y servidor coincidan. El health HTTP solo demuestra que Node está activo, **no que Ollama haya generado una interfaz**.
+
+## Pruebas realizadas y pendientes
+
+Comandos reproducibles:
+
+```sh
+npm test
+npm run build
+npm run check:portable
+npm run build:portable
+npm run build:demo
+```
+
+La suite reúne 58 pruebas del proyecto, integración y paquete. El ZIP se comprobó inicialmente con sus 21 pruebas, compilación, tipos y demo antes de adaptarlo. La regresión de inventario verifica que la herramienta conserve las cifras de la API y solo incluya productos con stock bajo o agotados. La prueba HTTP local del paquete exige esquemas en ambas etapas; la prueba de transporte Cloud comprueba su omisión, la cabecera de autorización y think:false. Se verifica que errores 401/403/429 no provocan reintentos, y que la recuperación del dictado no requiere onend. El servidor verifica también recibos independientes del modelo, deduplicación concurrente y eliminación de botones con cantidades preseleccionadas. Otra regresión conserva la última página de negocio al navegar y recargar sin enviar otra consulta.
+
+| Comprobación | Evidencia / alcance |
+| --- | --- |
+| Texto, contexto, historial y pantalla anterior | Pruebas automáticas con proveedor controlado |
+| Dictado final una vez, cancelación, permiso denegado y navegador sin soporte | Reconocimiento simulado; no audio físico |
+| Datos, alta de stock, venta, promociones y asistencia | HTTP real local contra los handlers MSW existentes; datos simulados |
+| Confirmación, valores editados y controles | Pruebas React y API; sin operaciones antes de confirmar |
+| Duplicados, concurrencia, JSON inválido y fallo tras acción | Pruebas del servidor y motor con proveedor controlado; recibos de Softy sin generación del modelo |
+| Diseño y operación de existencias | Navegador con proveedor controlado y datos de ejemplo; escritorio y móvil |
+| Ollama Cloud / Gemma real | HTTP y navegador con gemma4:31b; cifras verificadas y tiempos de 1.60–3.27 s |
+| Ollama / Gemma local real | Probado: reposición, formulario de existencias y lectura del stock actualizado; detalles abajo |
+| Micrófono físico y PWA en dispositivos | No realizados; el usuario pidió probar solo texto en esta ronda |
+| Spring Boot del equipo | Pendiente de URL disponible y contrato compatible |
+
+La revisión visual inicial cubrió escritorio de 1440 px con proveedor controlado y el breakpoint móvil de 496 px en el navegador integrado, sin desbordamiento horizontal y con controles de 44 px o más. El flujo visual de stock pasó de 8 a 13 unidades y Productos reflejó el mismo dato. `npm start` respondió 200 para `/softy`, health y la API de productos. La prueba posterior con Gemma real se detalla a continuación; la prueba en un celular físico sigue pendiente.
+
+El intento anterior con Gemini falló con HTTP 401 durante la generación; listar modelos no fue evidencia de generación exitosa. Al cambiar a Ollama se retiró la configuración Gemini local.
+
+### Prueba real con Ollama Cloud — 10 de octubre de 2026
+
+Proveedor real `https://ollama.com`, modelo `gemma4:31b`, clave privada del servidor, `think:false`. Datos de negocio MSW de ejemplo; no Spring Boot. Dos consultas HTTP completas en instancia aislada, sin operaciones de escritura:
+
+| Consulta | Plan | Interfaz | Tiempo total | Resultado |
+| --- | --- | --- | --- | --- |
+| ¿Qué productos necesito reponer? | 0.84 s | 2.35 s | 3.27 s | Existencias 8, 14 y 0; pedidos sugeridos 76, 77 y 98, correctos frente a la API. |
+| Quiero agregar existencias de leche entera | 0.49 s | 1.10 s | 1.60 s | Un StockForm con productoId 1 y sin cantidad preseleccionada, conservando historial y pantalla anterior. |
+
+Después se reinició `npm run dev` con configuración Cloud. La consulta de reposición pasó también desde la interfaz del navegador integrado y mostró las mismas cifras. Captura: `output/softy-cloud-reposicion.jpg`, 1280 × 1012. Registros: `output/softy-latency.jsonl` y `output/softy-latency-results.jsonl`; no contienen la clave ni cabeceras de autorización. La clave permanece en `.env.local`, ignorado por Git y con permisos 600.
+
+58 pruebas automáticas aprobadas; build web, tipos y build portable aprobados. La regresión de voz usa un reconocedor simulado: prueba que un error de red libera el micrófono lógico, permite reiniciar y no envía transcripciones tardías. No se dictó con micrófono físico ni se comprobó voz en Chrome/Safari. Cambiar el modelo a Cloud no sustituye el reconocimiento de voz del navegador. No se verificó el saldo ni la configuración de facturación de la cuenta; se confirmó acceso al modelo y respuestas HTTP 200. El plan Free tiene cuota; no se realizaron compras, recargas ni cambios de plan.
+
+Se descargó parcialmente una versión local de 1B para comparar, pero se canceló al decidir usar la nube y no se cambió a ese modelo. `gemma3:4b` quedó descargado y se liberó de memoria. Las mediciones locales previas fueron de decenas de segundos y la Mac presentó 8.4 GB de swap en uso; no son un benchmark controlado entre modelos.
+
+### Prueba anterior con proveedor local real — 10 de octubre de 2026
+
+Se verificó `gemma3:4b` instalado en Ollama local, Q4_K_M, digest `68ceab7e468a`. Navegador integrado en macOS, viewport medido de 1280 × 720 px. Se usó una instancia aislada de la app con `SOFTY_PORT=3003`, `VITE_USE_MOCKS=true` y la compilación de producción, para conservar los datos de la instancia abierta del usuario. Un registro HTTP temporal reenvió las solicitudes a Ollama sin modificar sus respuestas. No se sustituyó el proveedor por un fixture.
+
+| Caso | Resultado observado |
+| --- | --- |
+| “¿Qué productos necesito reponer?” | Leche 8, pan 14 y huevos 0; sugerencias 76, 77 y 98, coincidentes con la API de ejemplo. Plan + generación: aproximadamente 52 s. |
+| Solicitar formulario de existencias con historial | Formulario real del anfitrión con leche seleccionada, cantidad vacía y datos consultados en la API. Se retiró el botón con una cantidad preseleccionada por el modelo. |
+| Revisar 5 unidades | La API seguía mostrando 8; la revisión identificó producto, cantidad y motivo. |
+| Confirmar y guardar | La API pasó a 13. El recibo construido por el servidor mostró 13 y Productos reflejó el mismo dato. No se llamó a Gemma para producir el recibo. |
+| Navegar a Productos, volver y recargar | Historial de 5 intercambios y recibo restaurados; la última página de negocio quedó conservada. |
+| “¿Cuántas unidades de leche entera tengo ahora?” | Gemma consultó la API y mostró 13. Se verificaron contexto `/inventario`, 10 mensajes históricos y la pantalla anterior en la solicitud. Plan + generación: aproximadamente 46 s. |
+
+Antes de estos resultados hubo fallos reales: selección de herramientas incorrecta, JSON recortado con 4,096 tokens, controles incompletos, interpretación incorrecta de stock y repetición de la pantalla anterior. Se aplicaron esquemas JSON, contexto de 8,192 tokens, catálogo más pequeño, datos de reposición compactos y la solicitud actual al final del contexto. La confirmación de operaciones se movió a recibos construidos por el servidor para no depender de la generación posterior al guardado.
+
+Las pruebas demuestran estos casos concretos, no precisión garantizada en todas las preguntas ni protección total frente a prompt injection. Los datos y escrituras siguen siendo de ejemplo. Ventas, promociones y cambios de proveedor se verificaron automáticamente con API simulada; no se probaron todos esos casos con Gemma real. No se usó micrófono físico ni Spring Boot del equipo.
+
+Evidencia local, ignorada por Git: `output/gemma-pruebas.jsonl`, `output/softy-gemma-inventario.jpg` y `output/softy-gemma-operacion.jpg`. Los servidores auxiliares y el registro temporal se cierran al terminar; para repetir, usa la configuración normal de Ollama en el puerto 11434.
+
+Para repetir manualmente:
+
+1. Comprueba `ollama list` y abre Softy con el servidor de desarrollo.
+2. Escribe “¿Qué productos necesito reponer?” y verifica una interfaz con cifras de la API; no basta con `/health`.
+3. Pide agregar existencias, selecciona un producto y cantidad, revisa y confirma. Comprueba la nueva cantidad en Productos.
+4. Dicta una frase y verifica un solo envío. Prueba Cancelar antes de terminar y permiso denegado; el texto debe seguir disponible.
+5. Repite el caso con `VITE_USE_MOCKS=false` cuando Spring Boot esté listo. Registra navegador, modelo, latencia y resultados por separado del ensayo simulado.

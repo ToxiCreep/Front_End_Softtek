@@ -19,3 +19,7 @@ Interfaz para personas con poca experiencia digital. El objetivo es reconocer qu
 - La información sobre datos de ejemplo se consulta en Ayuda; conservar unidades, etiquetas de campos, errores y confirmaciones.
 
 El frontend usa las rutas del documento original mediante fetch. MSW simula esas solicitudes mientras llega Spring Boot; los DTO añadidos en OpenAPI siguen pendientes de acuerdo con backend.
+
+Softy está disponible desde la cabecera persistente. Conserva Helvetica Neue, tarjetas oscuras, botones azules, iconos verdes suaves y la barra Softtek. En escritorio separa solicitud y resultados; en móvil los apila y permite desplazarse sin tapar campos con la navegación inferior. Los controles tienen etiquetas visibles, texto de al menos 16 px en campos y objetivos táctiles de 44 px.
+
+La entrada explica en una frase qué puede pedir el usuario y ofrece ejemplos concretos. El historial se consulta bajo demanda. El dictado distingue escuchar, terminar y cancelar; errores conservan la escritura. Las operaciones muestran una revisión con producto y cantidades consultados en la API y requieren confirmación antes de guardar. Se identifica el origen simulado de los resultados, sin confundirlo con una conexión real del modelo. No se exige una gráfica cuando no ayuda a responder la solicitud.

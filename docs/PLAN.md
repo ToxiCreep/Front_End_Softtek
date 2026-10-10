@@ -63,7 +63,7 @@ Referencias: [Vite](https://vite.dev/guide/), [React Router](https://reactrouter
 | Inventario `/inventario` | Buscar productos, ver semáforo, cobertura y alertas; registrar entrada/merma | `GET /productos`, `GET /productos/categorias`, `GET /productos/{id}`, `GET /inventario/estado`, `GET /inventario/alertas`, `GET /inventario/reabasto`, `POST /inventario/movimientos` |
 | Promociones `/promociones` | Generar sugerencias, leer explicación, activar/rechazar y consultar resultado | `GET /promociones`, `POST /promociones/generar`, `PATCH /promociones/{id}/estado`, `GET /promociones/{id}/resultado` |
 | Demanda `/demanda` | Seleccionar producto/horizonte y comparar BASE vs. IA | `GET /predicciones`, `POST /predicciones/generar`, `GET /predicciones/comparar` |
-| Ajustes `/ajustes` | Mostrar sucursal y cambiar IA con confirmación del servidor | `GET /configuracion`, `PATCH /configuracion/ia` |
+| Ajustes `/ajustes` | Mostrar sucursal y seleccionar proveedor IA (0 ninguna, 1 Gemini, 2 Claude, 3 GPT) con confirmación del servidor | `GET /configuracion`, `PATCH /configuracion/ia` |
 | Venta de prueba, dentro de inventario | Registrar ticket para demostrar descuento y disminución de stock | `POST /ventas` |
 
 Las cargas de productos, históricos y contexto son herramientas del equipo de datos; no requieren pantallas en el MVP. Empleados, calendario, mantenimiento completo de catálogos, precisión de modelos y records quedan para P1.

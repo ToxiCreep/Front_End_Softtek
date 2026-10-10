@@ -5,7 +5,7 @@ type Product = Schema['Producto']
 type Promotion = Schema['Promocion']
 export const configuration: Schema['Configuracion'] = {
   nombreSucursal: 'Sucursal Centro', zona: 'Monterrey, Nuevo León', zonaHoraria: 'America/Monterrey', tamano: 'MEDIANA',
-  horaApertura: '08:00', horaCierre: '21:00', iaHabilitada: true, margenMinimoPromo: 15, descuentoMaximo: 30,
+  horaApertura: '08:00', horaCierre: '21:00', proveedorIA: 1, margenMinimoPromo: 15, descuentoMaximo: 30,
   mesesHistorico: 3, transaccionesPorEmpleadoHora: 20,
 }
 const product = (id: number, nombre: string, categoria: string, precioVenta: number, costo: number, stockActual: number, stockMinimo: number, stockMaximo: number, perecedero = false): Product => ({

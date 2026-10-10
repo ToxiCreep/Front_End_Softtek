@@ -55,3 +55,5 @@
 @media(max-width:370px){.mobile-nav a{font-size:11px}}
 .sale-action{width:100%;min-height:50px}.mobile-sale{display:none}
 @media(max-width:760px){.mobile-nav{height:calc(72px + env(safe-area-inset-bottom))}.mobile-sale{display:block;position:fixed;left:0;right:0;bottom:calc(72px + env(safe-area-inset-bottom));padding:12px 20px;z-index:19;background:linear-gradient(transparent,var(--canvas) 25%)}main{padding-bottom:calc(180px + env(safe-area-inset-bottom))}}
+
+.settings-provider{margin-top:22px}

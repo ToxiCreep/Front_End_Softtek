@@ -5,3 +5,4 @@ dist/
 *.tsbuildinfo
 output/
 .DS_Store
+demo-dist/

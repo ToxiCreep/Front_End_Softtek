@@ -1,0 +1,6 @@
+body { margin: 0; background: #f8fafc; font-family: system-ui, sans-serif; color: #172033; }
+main { max-width: 1280px; margin: auto; padding: 40px 24px; }
+.demo-header { margin-bottom: 32px; }
+.demo-header span { font-size: 12px; letter-spacing: .14em; font-weight: 700; color: #4f46e5; }
+.demo-header h1 { font-size: clamp(28px, 4vw, 42px); letter-spacing: -.04em; margin: 12px 0; }
+.demo-header p { color: #5c687a; max-width: 650px; line-height: 1.6; }

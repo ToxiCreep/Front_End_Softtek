@@ -1,6 +1,6 @@
 # Contrato de API e integración
 
-Versión propuesta: `0.1.0`. Spring Boot REST confirmado. Las reglas nuevas que resuelven ambigüedades del texto original son propuestas para acordar con el equipo, no decisiones ya tomadas por el backend.
+Versión propuesta: `0.2.0`. Spring Boot REST confirmado. Las reglas nuevas que resuelven ambigüedades del texto original son propuestas para acordar con el equipo, no decisiones ya tomadas por el backend.
 
 `contracts/openapi.json` define los esquemas de **P0**. El catálogo de este documento también incluye **P1**, cuyos cuerpos y respuestas deben incorporarse al OpenAPI antes de construir esas funciones. P0 = demo principal y carga de datos; P1 = ampliación.
 
@@ -44,9 +44,11 @@ Error común:
 
 | Método | Ruta | Propósito | Prioridad |
 | --- | --- | --- | --- |
-| GET | `/configuracion` | Configuración única; creada por backend al arrancar | P0 |
+| GET | `/configuracion` | Configuración única con `proveedorIA` numérico; creada por backend al arrancar | P0 |
 | PUT | `/configuracion` | Reemplazar campos editables | P1 |
-| PATCH | `/configuracion/ia` | `{ "iaHabilitada": true }`; devuelve configuración actualizada | P0 |
+| PATCH | `/configuracion/ia` | `{ "proveedorIA": 1 }`; devuelve configuración actualizada | P0 |
+
+`proveedorIA` reemplaza al booleano `iaHabilitada`: **0 = ninguna, 1 = Gemini, 2 = Claude, 3 = GPT**. GET `/configuracion` devuelve este mismo campo. PATCH rechaza booleanos, cadenas y valores fuera del enum con 400. Ninguna usa cálculos BASE; los otros valores habilitan IA con el proveedor elegido. Spring Boot debe adaptar su DTO y ejecución al nuevo contrato; el frontend no conecta por sí solo con esos proveedores. Softy sigue usando el Ollama configurado en su servidor.
 
 Horario de apertura menor que cierre; `mesesHistorico` y `transaccionesPorEmpleadoHora` ≥ 1. Para MVP se asume jornada dentro del mismo día; horario nocturno requiere otro acuerdo.
 
@@ -276,3 +278,19 @@ Estado de inventario sin demanda calculada:
 | Datos | Fixtures con IDs/SKU/fechas/costos coherentes, importaciones históricas y contexto |
 
 Si el motor es Python, Spring Boot lo consume mediante una API interna que el frontend no llama. Acordar entradas (historial diario, contexto, producto y corte) y salidas (predicción, intervalos, reabasto y explicación) entre esos dos equipos. Ese contrato interno es distinto del OpenAPI público de este repositorio.
+
+## 6. API de Softy en el servidor del frontend
+
+Estas rutas viven en Node y no añaden obligaciones al repositorio Spring Boot. El navegador usa `/api/v1` para el negocio; Node lo dirige a la API del equipo o a MSW de demo.
+
+| Método | Ruta | Respuesta |
+| --- | --- | --- |
+| GET | `/api/softy/health` | `{ service: "Softy", status: "online", providerConfigured: true }`; no prueba inferencia |
+| POST | `/api/softy/chat` | `A2UIScreen` directamente, sin wrapper |
+| POST | `/api/softy/actions/prepare` | Revisión canónica de una operación; no la ejecuta |
+
+Chat recibe `{ message, context?, history?, action?, screen? }`, según `MayaRequest` en `vendor/maya-portable/src/core/types.ts`. Mensaje y cada entrada de historial: hasta 6,000 caracteres; hasta 24 mensajes; pantalla de hasta 200 componentes y 12 niveles. El contexto se considera informativo.
+
+Preparar recibe `{ type, payload?, componentId? }`, devuelve `{ operationId, title, description, action }`. Para ejecutar una escritura confirmada, chat recibe la `action` devuelta y `context.operationId`. Una escritura sin revisión válida se rechaza. Las acciones implementadas y sus payloads se describen en [Softy](SOFTY.md).
+
+Errores JSON: `{ error, stage, actionMayHaveRun }`. Solicitud inválida → 400; conflictos y reglas de negocio conservan 409/422 de la API; fallo del modelo → 502. Si pudo guardarse antes de fallar la generación, `actionMayHaveRun:true`: consultar el estado antes de repetir. No reintentar automáticamente las operaciones. Los recibos deduplican dentro de una instancia; Spring Boot debe implementar idempotencia persistente para reinicios o varias instancias.

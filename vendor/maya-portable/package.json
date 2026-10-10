@@ -1,0 +1,44 @@
+{
+  "name": "maya-portable",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Motor portable de Maya: texto/voz a interfaces JSON con contexto del programa anfitrión",
+  "type": "module",
+  "engines": { "node": ">=22.12" },
+  "exports": {
+    ".": { "types": "./dist/core/index.d.ts", "import": "./dist/core/index.js" },
+    "./browser": { "types": "./dist/browser/index.d.ts", "import": "./dist/browser/index.js" },
+    "./react": { "types": "./dist/react/index.d.ts", "import": "./dist/react/index.js" },
+    "./server": { "types": "./dist/server/index.d.ts", "import": "./dist/server/index.js" },
+    "./styles.css": "./src/react/styles.css"
+  },
+  "files": ["dist", "src/react/styles.css", "README.md", "EXTRACTION.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "concurrently -k -n API,WEB \"tsx watch examples/server.ts\" \"vite --host 127.0.0.1\"",
+    "start": "tsx examples/server.ts",
+    "test": "vitest run",
+    "check": "tsc -p tsconfig.check.json --noEmit",
+    "build:demo": "vite build",
+    "prepack": "npm run build"
+  },
+  "dependencies": { "express": "^4.21.2" },
+  "peerDependencies": { "react": "^18.3.1 || ^19.0.0" },
+  "peerDependenciesMeta": { "react": { "optional": true } },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "concurrently": "^9.1.2",
+    "jsdom": "^30.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "vitest": "^5.0.0"
+  }
+}

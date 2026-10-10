@@ -1,9 +1,8 @@
 import { http, HttpResponse, delay } from 'msw'
-import { apiBase, shiftDate, today } from './api'
+import { apiBase, iaProviders, shiftDate, today } from './api'
 import type { Schema } from './api'
 import { alerts, changePromotion, changeStock, configuration, generatePredictions, inventoryState, movements, predictions, products, promotions, sales, summarize } from './demo'
 
-const endpoint = (path: string) => `${apiBase}${path}`
 const error = (mensaje: string, status = 422) => HttpResponse.json({ status, error: status === 409 ? 'CONFLICTO' : 'REGLA_NEGOCIO', mensaje, campos: {} }, { status })
 const product = (id: number) => products.find(p => p.id === id)
 const range = (request: Request) => {
@@ -12,12 +11,14 @@ const range = (request: Request) => {
 }
 
 // shortcut: demo en memoria; Spring Boot dará persistencia al conectar el backend.
-export const handlers = [
+export function createHandlers(base = apiBase) {
+const endpoint = (path: string) => `${base}${path}`
+return [
   http.get(endpoint('/configuracion'), async () => { await delay(180); return HttpResponse.json(configuration) }),
   http.patch(endpoint('/configuracion/ia'), async ({ request }) => {
     const body = await request.json() as Schema['CambioIA']
-    if (typeof body.iaHabilitada !== 'boolean') return error('Selecciona un estado válido.', 400)
-    configuration.iaHabilitada = body.iaHabilitada
+    if (!body || Object.keys(body).some(key => key !== 'proveedorIA') || !iaProviders.some(provider => provider.value === body.proveedorIA)) return error('Selecciona un proveedor válido: 0, 1, 2 o 3.', 400)
+    configuration.proveedorIA = body.proveedorIA
     return HttpResponse.json(configuration)
   }),
   http.get(endpoint('/productos/categorias'), () => HttpResponse.json([...new Set(products.map(p => p.categoria))])),
@@ -33,7 +34,7 @@ export const handlers = [
   http.get(endpoint('/inventario/estado'), () => HttpResponse.json(inventoryState())),
   http.get(endpoint('/inventario/alertas'), () => HttpResponse.json(alerts())),
   http.get(endpoint('/inventario/reabasto'), () => HttpResponse.json(products.map(p => {
-    const prediction = predictions.findLast(item => item.productoId === p.id && item.fechaObjetivo === shiftDate(today(), 1) && item.modelo === (configuration.iaHabilitada ? 'IA' : 'BASE'))
+    const prediction = predictions.findLast(item => item.productoId === p.id && item.fechaObjetivo === shiftDate(today(), 1) && item.modelo === (configuration.proveedorIA ? 'IA' : 'BASE'))
     return prediction ? { productoId: p.id, sku: p.sku, nombre: p.nombre, stockActual: p.stockActual, stockRecomendado: prediction.stockRecomendado, cantidadAPedir: Math.max(0, prediction.stockRecomendado - p.stockActual), fechaObjetivo: prediction.fechaObjetivo, generadaEn: prediction.generadaEn, modelo: prediction.modelo } satisfies Schema['Reabasto'] : null
   }).filter(p => p && p.cantidadAPedir > 0))),
   http.get(endpoint('/inventario/perdidas'), ({ request }) => {
@@ -117,7 +118,7 @@ export const handlers = [
   http.post(endpoint('/promociones/generar'), async ({ request }) => {
     const body = await request.json() as Schema['PromocionGenerarSolicitud']
     if (!['AUTO', 'BASE', 'IA'].includes(body.modelo)) return error('Selecciona un modelo válido.', 400)
-    if (body.modelo === 'IA' && !configuration.iaHabilitada) return error('Activa la inteligencia artificial en Ajustes para usar este modelo.')
+    if (body.modelo === 'IA' && !configuration.proveedorIA) return error('Activa la inteligencia artificial en Ajustes para usar este modelo.')
     await delay(650)
     return HttpResponse.json(promotions.filter(p => p.estado === 'SUGERIDA' && (!body.productoIds?.length || body.productoIds.includes(p.productoId))), { status: 201 })
   }),
@@ -138,10 +139,10 @@ export const handlers = [
   http.post(endpoint('/predicciones/generar'), async ({ request }) => {
     const body = await request.json() as Schema['PrediccionGenerarSolicitud']
     if (!Number.isInteger(body.dias) || body.dias < 1 || body.dias > 31 || !['AUTO', 'BASE', 'IA', 'AMBOS'].includes(body.modelo)) return error('Elige entre 1 y 31 días y un modelo válido.')
-    if (['IA', 'AMBOS'].includes(body.modelo) && !configuration.iaHabilitada) return error('Activa la inteligencia artificial en Ajustes para comparar ambos modelos.')
+    if (['IA', 'AMBOS'].includes(body.modelo) && !configuration.proveedorIA) return error('Activa la inteligencia artificial en Ajustes para comparar ambos modelos.')
     if (body.productoIds?.some(id => !product(id))) return error('No encontramos uno de los productos.', 404)
     await delay(700)
-    return HttpResponse.json(generatePredictions(body.productoIds || [], body.dias, body.modelo === 'AUTO' ? configuration.iaHabilitada ? 'IA' : 'BASE' : body.modelo), { status: 201 })
+    return HttpResponse.json(generatePredictions(body.productoIds || [], body.dias, body.modelo === 'AUTO' ? configuration.proveedorIA ? 'IA' : 'BASE' : body.modelo), { status: 201 })
   }),
   http.get(endpoint('/predicciones/comparar'), ({ request }) => {
     const id = Number(new URL(request.url).searchParams.get('productoId'))
@@ -155,3 +156,5 @@ export const handlers = [
     return HttpResponse.json(result)
   }),
 ]
+}
+export const handlers = createHandlers()

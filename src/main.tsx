@@ -4,24 +4,20 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router'
 import { useMocks } from './api'
 import App from './App'
+import { SoftyProvider } from './Softy'
 import './styles.css'
 
 const client = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 }, mutations: { retry: false } } })
 async function start() {
-  if (useMocks) {
-    const { handlers } = await import('./mocks')
-    const { setupWorker } = await import('msw/browser')
-    const worker = setupWorker(...handlers)
-    await worker.start({ onUnhandledRequest: 'bypass', quiet: true })
-  } else if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  if ('serviceWorker' in navigator) {
     const registrations = await navigator.serviceWorker.getRegistrations()
     for (const registration of registrations) {
       if (registration.active?.scriptURL.endsWith('/mockServiceWorker.js')) await registration.unregister()
     }
-    await navigator.serviceWorker.register('/sw.js')
+    if (import.meta.env.PROD && !useMocks) await navigator.serviceWorker.register('/sw.js')
   }
   createRoot(document.getElementById('root')!).render(
-    <React.StrictMode><QueryClientProvider client={client}><BrowserRouter><App /></BrowserRouter></QueryClientProvider></React.StrictMode>,
+    <React.StrictMode><QueryClientProvider client={client}><BrowserRouter><SoftyProvider><App /></SoftyProvider></BrowserRouter></QueryClientProvider></React.StrictMode>,
   )
 }
 start().catch(() => {

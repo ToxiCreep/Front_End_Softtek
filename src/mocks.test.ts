@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { setupServer } from 'msw/node'
-import { products, promotions, sales } from './demo'
+import { configuration, products, promotions, sales } from './demo'
 
 vi.hoisted(() => vi.stubEnv('VITE_API_BASE_URL', 'http://localhost/api/v1'))
 const { handlers } = await import('./mocks')
@@ -11,6 +11,30 @@ afterAll(() => { server.close(); vi.unstubAllEnvs() })
 const post = (ticket: string, lineas: unknown[]) => fetch('http://localhost/api/v1/ventas', {
   method: 'POST', headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ ticket, fechaHora: new Date().toISOString(), lineas }),
+})
+
+const changeIA = (body: unknown) => fetch('http://localhost/api/v1/configuracion/ia', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+it('guarda las cuatro opciones numéricas y ninguna deshabilita las predicciones IA', async () => {
+  const initial = configuration.proveedorIA
+  try {
+    for (const proveedorIA of [1, 2, 3, 0]) {
+      const response = await changeIA({ proveedorIA })
+      expect(response.status).toBe(200)
+      expect(await response.json()).toMatchObject({ proveedorIA })
+      const saved = await (await fetch('http://localhost/api/v1/configuracion')).json()
+      expect(saved.proveedorIA).toBe(proveedorIA)
+      expect(saved).not.toHaveProperty('iaHabilitada')
+    }
+    const prediction = await fetch('http://localhost/api/v1/predicciones/generar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modelo: 'IA', dias: 7, productoIds: [1] }) })
+    expect(prediction.status).toBe(422)
+  } finally { configuration.proveedorIA = initial }
+})
+it('rechaza booleanos, valores fuera del enum y el contrato anterior sin cambiar la configuración', async () => {
+  const initial = configuration.proveedorIA
+  for (const body of [{ proveedorIA: true }, { proveedorIA: false }, { proveedorIA: '2' }, { proveedorIA: -1 }, { proveedorIA: 4 }, { proveedorIA: 1.5 }, { proveedorIA: null }, { iaHabilitada: true }, {}, null]) {
+    expect((await changeIA(body)).status).toBe(400)
+    expect(configuration.proveedorIA).toBe(initial)
+  }
 })
 
 describe('API simulada de ventas', () => {

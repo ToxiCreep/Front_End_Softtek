@@ -34,7 +34,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Encender o apagar IA */
+        /** Seleccionar proveedor de asistencia inteligente */
         patch: operations["cambiarIA"];
         trace?: never;
     };
@@ -447,7 +447,12 @@ export interface components {
             tamano: "PEQUENA" | "MEDIANA" | "GRANDE";
             horaApertura: string;
             horaCierre: string;
-            iaHabilitada: boolean;
+            /**
+             * @description 0 = ninguna, 1 = Gemini, 2 = Claude, 3 = GPT.
+             * @example 1
+             * @enum {integer}
+             */
+            proveedorIA: 0 | 1 | 2 | 3;
             /** @description Porcentaje 0–100; fórmula costo × (1 + margen/100). */
             margenMinimoPromo: number;
             descuentoMaximo: number;
@@ -455,7 +460,12 @@ export interface components {
             transaccionesPorEmpleadoHora: number;
         };
         CambioIA: {
-            iaHabilitada: boolean;
+            /**
+             * @description 0 = ninguna, 1 = Gemini, 2 = Claude, 3 = GPT.
+             * @example 1
+             * @enum {integer}
+             */
+            proveedorIA: 0 | 1 | 2 | 3;
         };
         /** @description precioVenta > costo; stockMinimo ≤ stockMaximo; vidaUtilDias requerido y no nulo si esPerecedero. Stock inicial registrado como ENTRADA. */
         ProductoAlta: {
