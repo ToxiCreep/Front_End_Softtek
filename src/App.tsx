@@ -19,7 +19,7 @@ const navigation = [
   { to: '/', label: 'Inicio', icon: Home },
   { to: '/inventario', label: 'Productos', icon: Box },
   { to: '/ventas', label: 'Ventas', icon: ReceiptText },
-  { to: '/promociones', label: 'Promociones', icon: Tag },
+  { to: '/promociones', label: 'Promos', icon: Tag },
   { to: '/demanda', label: 'Demanda', icon: ChartNoAxesCombined },
   { to: '/personal', label: 'Personal', icon: Users },
   { to: '/calendario', label: 'Calendario', icon: CalendarDays },

@@ -1,11 +1,11 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router'
-import { ArrowUp, Mic, Square, X } from 'lucide-react'
+import { ArrowUp, ArrowUpRight, Box, ChartNoAxesCombined, History, Mic, PackagePlus, PanelsTopLeft, Square, SquarePen, Tag, X } from 'lucide-react'
 import { createMayaClient, MayaHttpError, readMayaResponse } from '../vendor/maya-portable/src/browser/index.js'
 import { A2UIRenderer, useVoiceInput } from '../vendor/maya-portable/src/react/index.js'
 import type { ComponentRendererProps } from '../vendor/maya-portable/src/react/A2UIRenderer.js'
-import { normalizeA2UIScreen } from '../vendor/maya-portable/src/core/protocol.js'
+import { isRecord, normalizeA2UIScreen } from '../vendor/maya-portable/src/core/protocol.js'
 import type { A2UIScreen, HistoryItem, MayaAction } from '../vendor/maya-portable/src/core/types.js'
 import type { MayaClient } from '../vendor/maya-portable/src/browser/client.js'
 import { api, useMocks, type Schema } from './api'
@@ -16,19 +16,38 @@ import './softy.css'
 
 const client = createMayaClient({ endpoint: '/api/softy/chat' })
 const storageKey = 'softy.conversation.v1'
-type Conversation = { history: HistoryItem[]; screen?: A2UIScreen; contextPage?: string }
+type SavedInterface = { id: string; title: string; createdAt: number; screen: A2UIScreen; history: HistoryItem[]; contextPage: string }
+type Conversation = { history: HistoryItem[]; screen?: A2UIScreen; contextPage?: string; savedInterfaces?: SavedInterface[]; savedAt?: number }
+function readHistory(value: unknown): HistoryItem[] {
+  return Array.isArray(value) ? value.filter((item): item is HistoryItem => isRecord(item) && ['user', 'assistant'].includes(String(item.role)) && typeof item.content === 'string').slice(-24) : []
+}
+function interfaceDate(value: number) {
+  return new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }).format(value)
+}
 function storedConversation(): Conversation {
   try {
     const data = JSON.parse(sessionStorage.getItem(storageKey) || 'null')
     if (!data || !Array.isArray(data.history)) return { history: [] }
-    const history = data.history.filter((item: HistoryItem) => ['user', 'assistant'].includes(item.role) && typeof item.content === 'string').slice(-24)
-    return { history, ...(typeof data.contextPage === 'string' ? { contextPage: data.contextPage } : {}), ...(data.screen ? { screen: normalizeA2UIScreen(data.screen) } : {}) }
+    const savedInterfaces: SavedInterface[] = []
+    if (Array.isArray(data.savedInterfaces)) for (const item of data.savedInterfaces) {
+      try {
+        if (!isRecord(item) || typeof item.id !== 'string' || typeof item.title !== 'string' || typeof item.createdAt !== 'number' || !Number.isFinite(item.createdAt) || Math.abs(item.createdAt) > 8.64e15 || typeof item.contextPage !== 'string') continue
+        const screen = normalizeA2UIScreen(item.screen)
+        if (screen.components.length) savedInterfaces.push({ id: item.id, title: item.title, createdAt: item.createdAt, contextPage: item.contextPage, screen, history: readHistory(item.history) })
+        if (savedInterfaces.length === 5) break
+      } catch { /* Una interfaz dañada no impide abrir las demás. */ }
+    }
+    const history = readHistory(data.history)
+    const screen = data.screen ? normalizeA2UIScreen(data.screen) : undefined
+    if (!Array.isArray(data.savedInterfaces) && screen?.components.length) savedInterfaces.push({ id: crypto.randomUUID(), title: [...history].reverse().find(item => item.role === 'user')?.content.slice(0, 160) || 'Última interfaz', createdAt: Date.now(), screen, history, contextPage: typeof data.contextPage === 'string' ? data.contextPage : '/' })
+    return { history, savedInterfaces, ...(typeof data.contextPage === 'string' ? { contextPage: data.contextPage } : {}), ...(screen ? { screen } : {}), ...(typeof data.savedAt === 'number' && Number.isFinite(data.savedAt) && Math.abs(data.savedAt) <= 8.64e15 ? { savedAt: data.savedAt } : {}) }
   } catch { return { history: [] } }
 }
 interface SoftyState extends Conversation {
   loading: boolean; error: string; contextPage: string
   send: (message: string, action?: MayaAction, operationId?: string) => Promise<boolean>
   reset: () => void
+  restore: (saved: SavedInterface) => void
 }
 const SoftyContext = createContext<SoftyState | undefined>(undefined)
 export function SoftyProvider({ children, modelClient = client }: { children: ReactNode; modelClient?: MayaClient }) {
@@ -48,7 +67,8 @@ export function SoftyProvider({ children, modelClient = client }: { children: Re
     try {
       const screen = await modelClient.process({ message: userMessage, history: conversation.history.slice(-22), screen: conversation.screen,
         context: { page: contextPage.current, dataMode: useMocks ? 'simulated' : 'spring-boot', ...(operationId ? { operationId } : {}) }, action }, AbortSignal.timeout(300_000))
-      setConversation({ screen, history: [...conversation.history, { role: 'user', content: userMessage } as HistoryItem, { role: 'assistant', content: screen.assistantMessage } as HistoryItem].slice(-24) })
+      const history = [...conversation.history, { role: 'user', content: userMessage } as HistoryItem, { role: 'assistant', content: screen.assistantMessage } as HistoryItem].slice(-24)
+      setConversation(previous => ({ screen, history, savedInterfaces: screen.components.length ? [{ id: crypto.randomUUID(), title: userMessage.slice(0, 160), createdAt: Date.now(), screen, history, contextPage: contextPage.current }, ...(previous.savedInterfaces || [])].slice(0, 5) : previous.savedInterfaces }))
       return true
     } catch (cause) {
       const uncertain = cause instanceof MayaHttpError ? cause.actionMayHaveRun : Boolean(operationId)
@@ -59,7 +79,10 @@ export function SoftyProvider({ children, modelClient = client }: { children: Re
       busy.current = false; setLoading(false)
     }
   }
-  return <SoftyContext.Provider value={{ ...conversation, loading, error, contextPage: contextPage.current, send, reset: () => { if (!busy.current) { setConversation({ history: [] }); setError('') } } }}>{children}</SoftyContext.Provider>
+  return <SoftyContext.Provider value={{ ...conversation, loading, error, contextPage: contextPage.current, send,
+    reset: () => { if (!busy.current) { setConversation(previous => ({ history: [], savedInterfaces: previous.savedInterfaces })); setError('') } },
+    restore: saved => { if (!busy.current) { contextPage.current = saved.contextPage; setConversation(previous => ({ screen: saved.screen, history: saved.history, savedInterfaces: previous.savedInterfaces, savedAt: saved.createdAt })); setError('') } },
+  }}>{children}</SoftyContext.Provider>
 }
 export default function Softy() {
   const softy = useContext(SoftyContext)!
@@ -67,11 +90,17 @@ export default function Softy() {
   const [review, setReview] = useState<ActionReview | null>(null)
   const [actionError, setActionError] = useState('')
   const [preparing, setPreparing] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const preparingRef = useRef(false)
   const navigate = useNavigate()
   const online = useOnline()
   const disabled = softy.loading || preparing || !online
   const voice = useVoiceInput({ lang: 'es-MX', onFinal: text => { setMessage(text); void submit(text) } })
+  const prompts = softy.screen ? softy.screen.suggestedPrompts || [] : ['¿Qué productos necesito reponer?', 'Muéstrame las ventas de los últimos 7 días', 'Quiero agregar existencias', 'Muéstrame las promociones por revisar']
+  const suggestions = prompts.length > 0 && <div className="softy-suggestions">{prompts.map((prompt, i) => {
+    const PromptIcon = softy.screen ? ArrowUpRight : [Box, ChartNoAxesCombined, PackagePlus, Tag][i]
+    return <button key={i} className="softy-suggestion" disabled={disabled || voice.listening} onClick={() => { void softy.send(prompt) }}><span className="softy-suggestion-top"><span className="softy-suggestion-icon"><PromptIcon size={22} aria-hidden="true" /></span>{!softy.screen && <ArrowUpRight size={18} aria-hidden="true" />}</span><span>{prompt}</span></button>
+  })}</div>
   async function submit(text = message) { if (await softy.send(text)) setMessage('') }
   async function onAction(action: MayaAction) {
     if (disabled || preparingRef.current) return
@@ -100,8 +129,8 @@ export default function Softy() {
     setActionError('Esta acción no está disponible. Puedes pedirle a Softy otra opción.')
   }
   return <div className="softy-page">
-    <PageTitle title="Softy" description="Dime qué necesitas revisar o hacer en tu sucursal."><button className="text-button" disabled={disabled || voice.listening} onClick={() => { voice.cancel(); softy.reset(); setMessage(''); setActionError('') }}>Nueva conversación</button></PageTitle>
-    <div className="softy-layout">
+    <PageTitle title="Softy" description="Dime qué necesitas revisar o hacer en tu sucursal."><div className="softy-toolbar"><button className="softy-tool" aria-label="Nueva conversación" title="Nueva conversación" disabled={disabled || voice.listening} onClick={() => { voice.cancel(); softy.reset(); setMessage(''); setActionError('') }}><SquarePen size={21} aria-hidden="true" /></button><button className="softy-tool" aria-label="Historial de interfaces" title="Historial de interfaces" aria-haspopup="dialog" disabled={softy.loading || preparing || voice.listening} onClick={() => setShowHistory(true)}><History size={21} aria-hidden="true" /></button></div></PageTitle>
+    <div className={`softy-layout${softy.screen ? '' : ' softy-layout-start'}`}>
       <section className="panel softy-chat" aria-label="Conversación con Softy">
         <div className="softy-chat-title"><span className="softy-avatar" aria-hidden="true" /><h2>¿En qué te ayudo?</h2></div>
         <form onSubmit={event => { event.preventDefault(); void submit() }} className="stack-form">
@@ -119,9 +148,12 @@ export default function Softy() {
         {softy.loading && <p className="softy-working" role="status">Softy está consultando tu sucursal…</p>}
         {preparing && <p className="softy-working" role="status">Preparando los datos para que los revises…</p>}
         {softy.screen && useMocks && <p className="field-help">Datos de ejemplo de la sucursal.</p>}
-        {softy.screen ? <><p className="softy-answer">{softy.screen.assistantMessage}</p><A2UIRenderer key={softy.screen.screenId} screen={softy.screen} loading={disabled || voice.listening} onAction={action => { void onAction(action) }} components={{ StockForm: BusinessForm, SaleForm: BusinessForm }} />{softy.screen.suggestedPrompts?.length ? <div className="softy-suggestions">{softy.screen.suggestedPrompts.map((prompt, i) => <button className="button outlined" disabled={disabled || voice.listening} key={i} onClick={() => { void softy.send(prompt) }}>{prompt}</button>)}</div> : null}</> : <div className="panel softy-start"><span className="softy-avatar" aria-hidden="true" /><h2>Empieza con una pregunta</h2><div className="softy-suggestions">{['¿Qué productos necesito reponer?', 'Muéstrame las ventas de los últimos 7 días', 'Quiero agregar existencias'].map(prompt => <button key={prompt} className="button outlined" disabled={disabled || voice.listening} onClick={() => { void softy.send(prompt) }}>{prompt}</button>)}</div></div>}
+        {softy.screen ? <>{softy.savedAt !== undefined && <p className="softy-saved-note">Interfaz guardada · {interfaceDate(softy.savedAt)}</p>}<p className="softy-answer">{softy.screen.assistantMessage}</p><A2UIRenderer key={`${softy.screen.screenId}:${softy.savedAt || ''}`} screen={softy.screen} loading={disabled || voice.listening} onAction={action => { void onAction(action) }} components={{ StockForm: BusinessForm, SaleForm: BusinessForm }} />{suggestions}</> : <div className="panel softy-start"><h2>Recomendaciones de hoy</h2>{suggestions}</div>}
       </section>
     </div>
+    {showHistory && <Modal title="Últimas interfaces" onClose={() => setShowHistory(false)}>
+      {softy.savedInterfaces?.length ? <ol className="softy-saved-list">{softy.savedInterfaces.map(saved => <li key={saved.id}><button className="softy-saved-item" onClick={() => { softy.restore(saved); setMessage(''); setActionError(''); setShowHistory(false) }}><span className="softy-saved-icon"><PanelsTopLeft size={21} aria-hidden="true" /></span><span className="softy-saved-copy"><strong>{saved.title}</strong><time dateTime={new Date(saved.createdAt).toISOString()}>{interfaceDate(saved.createdAt)}</time></span><ArrowUpRight size={19} aria-hidden="true" /></button></li>)}</ol> : <p className="softy-history-empty">Las interfaces que genere Softy aparecerán aquí.</p>}
+    </Modal>}
     {review && <Modal title={review.title} description={review.description} onClose={() => setReview(null)} busy={softy.loading}>
       <div className="modal-actions"><button className="button outlined" disabled={softy.loading} onClick={() => setReview(null)}>Cancelar</button><button className="button primary" disabled={disabled} onClick={() => { const pending = review; setReview(null); void softy.send('Guarda la operación que acabo de revisar y muestra el resultado de la API.', pending.action, pending.operationId) }}>Confirmar y guardar</button></div>
     </Modal>}
