@@ -1,5 +1,5 @@
 import type { components } from './api-schema'
-import { adaptRequest, adaptResponse } from './adapters'
+import { adaptRequest, adaptResponse } from './adapters.js'
 
 export type Schema = components['schemas']
 export const iaProviders = [{ value: 1, label: 'Gemini' }, { value: 2, label: 'Claude' }, { value: 3, label: 'GPT' }, { value: 0, label: 'Ninguna' }] as const

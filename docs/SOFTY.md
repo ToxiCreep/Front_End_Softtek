@@ -133,7 +133,7 @@ La suite reúne 85 pruebas del proyecto, integración y paquete. El ZIP se compr
 | Diseño y operación de existencias | Navegador con proveedor controlado y datos de ejemplo; escritorio y móvil |
 | Ollama Cloud / Gemma real (prueba inicial) | Datos MSW: HTTP y navegador con gemma4:31b; tiempos de 1.60–3.27 s |
 | Gemma Cloud + Spring real (10 octubre 2026) | Reposición en 4.44 s; cuatro cifras cotejadas con Render. La misma consulta en Vercel CLI local: 5.89 s. Rechazo de resumen de novela: 8.47 s. |
-| Función y rutas de Vercel | Build de producción con ajustes del proyecto sofftek; HTTP real en Vercel CLI local para health, chat y actions/prepare. Revisión real preparada, sin guardar. |
+| Función y rutas de Vercel | Build de producción con ajustes de sofftek y arranque del paquete compilado directamente en Node, sin Vite/tsx. HTTP real en Vercel CLI local para health, chat y actions/prepare. Revisión real preparada, sin guardar. |
 | Revisiones entre instancias | Pruebas simuladas: recuperación firmada, concurrencia, firma inválida, otra sesión, payload alterado y vencimiento. |
 | Ollama / Gemma local real | Probado: reposición, formulario de existencias y lectura del stock actualizado; detalles abajo |
 | Micrófono físico y PWA en dispositivos | No realizados; el usuario pidió probar solo texto en esta ronda |
