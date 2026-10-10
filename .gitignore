@@ -2,7 +2,10 @@ node_modules/
 dist/
 .env
 .env.local
+.vercel/
 *.tsbuildinfo
 output/
 .DS_Store
 demo-dist/
+.env.*
+!.env.example

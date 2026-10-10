@@ -12,7 +12,7 @@ La configuración actual usa la nube para evitar la inferencia en la Mac de 8 GB
 
 ```dotenv
 VITE_API_BASE_URL=/api/v1
-VITE_USE_MOCKS=true
+SOFTTEK_API_URL=https://tienda-inteligente-api.onrender.com/api/v1
 SOFTY_PORT=3001
 SOFTY_BIND=127.0.0.1
 OLLAMA_HOST=https://ollama.com
@@ -29,17 +29,24 @@ Reinicia `npm run dev` después de cambiar `.env.local`. Para volver a local: `O
 
 ## Conectar el repositorio del equipo
 
-No hay que fusionar los repositorios. Cambia estos valores y reinicia:
+No hay que fusionar los repositorios. La app consume Spring Boot en Render por defecto. Para cambiarlo, ajusta estos valores y reinicia:
 
 ```dotenv
 VITE_API_BASE_URL=/api/v1
-VITE_USE_MOCKS=false
-SOFTTEK_API_URL=http://localhost:8080/api/v1
+SOFTTEK_API_URL=https://tienda-inteligente-api.onrender.com/api/v1
 ```
 
-El navegador consume rutas relativas. Vite dirige `/api` a Node durante desarrollo; en producción Node sirve la compilación y `/api`. Node usa una única URL fija de Spring Boot para las pantallas, herramientas y operaciones. Reenvía Authorization/Cookie de la solicitud cuando existen; no envía esas credenciales al modelo. Los DTO son los de `contracts/openapi.json`.
+El navegador consume rutas relativas. Vite dirige `/api` a Node durante desarrollo; `npm start` sirve la compilación y `/api`. Node usa una URL fija de Spring Boot para las pantallas, herramientas y operaciones. Reenvía Authorization/Cookie cuando existen; no envía esas credenciales al modelo. `src/adapters.ts` traduce los DTO de Spring al contrato de las páginas.
 
-En demo, MSW corre en Node reutilizando `src/mocks.ts` y `src/demo.ts`. Softy y las demás pantallas consultan el mismo estado, que se pierde al reiniciar Node. No hay una base de datos adicional. Ollama puede ser real mientras los datos siguen siendo simulados: son pruebas distintas.
+MSW y `src/demo.ts` se conservan como fixtures de las pruebas. La app ya no arranca el servidor simulado, y `VITE_USE_MOCKS` no cambia el modo de datos en ejecución. Las pruebas históricas de Ollama con datos MSW se distinguen abajo de las pruebas nuevas con Spring real.
+
+## Vercel
+
+`api/softy.ts` exporta la app Express de `server/app.ts`, sin abrir un puerto. `vercel.json` dirige `/api/softy/*` a esa función y `/api/v1/*` a Render. El fallback `index.html` excluye `/api/*`. Esto corrige el 405 vacío observado en producción: POST `/api/softy/chat` terminaba en un archivo estático y el cliente intentaba leerlo como JSON.
+
+Configura OLLAMA_API_KEY en **Settings → Environment Variables** para Production y Preview y vuelve a desplegar. La clave nunca usa prefijo VITE_. Los valores predeterminados son OLLAMA_HOST=https://ollama.com, OLLAMA_MODEL=gemma4:31b, A2UI_MODEL=gemma4:31b y SOFTTEK_API_URL=https://tienda-inteligente-api.onrender.com/api/v1. Si cambia Spring, actualiza también el destino de `/api/v1/*` en `vercel.json`. Las [funciones Node](https://vercel.com/docs/functions/runtimes/node-js) tienen aquí maxDuration:300; para proyectos antiguos, [Fluid Compute y los límites](https://vercel.com/docs/functions/configuring-functions/duration) deben admitir ese valor.
+
+Comprueba GET `/api/softy/health` (JSON, providerConfigured:true) y una consulta en `/softy`. El cliente maneja cuerpos vacíos, HTML y JSON truncado con un mensaje legible, sin mostrar errores internos del navegador. La preparación de acciones usa el mismo manejo de respuestas.
 
 ## Flujo y acciones
 
@@ -72,9 +79,13 @@ Los datos desconocidos permanecen `null`: no se presentan como cero. Las estimac
 
 Los formularios `StockForm` y `SaleForm` cargan productos desde el cliente existente, piden valores al usuario y validan cantidades. El servidor retira los ActionButton ADD_STOCK / REGISTER_SALE que genera el modelo: las cantidades se introducen en los formularios del anfitrión. Las cinco acciones de escritura siempre solicitan revisión y confirmación. La revisión utiliza el nombre y estado consultados en la API, no solo texto del modelo. Spring Boot sigue siendo responsable de transacciones, stock final, precio, descuentos, estados y permisos.
 
-Cada revisión recibe un `operationId` generado por Node. Repetir la misma solicitud, incluso concurrentemente, reutiliza su promesa de ejecución. Node envía `Idempotency-Key` y conserva el ticket de venta. Después de guardar, el servidor devuelve un recibo sin llamar al modelo; si la API devuelve stockResultante, se muestra ese valor directamente. Un fallo incierto de la API puede devolver `actionMayHaveRun:true`; la UI advierte y actualiza los datos, sin reenviar automáticamente la escritura. El motor portátil mantiene su manejo de fallos de generación tras acciones para otros anfitriones.
+Cada revisión recibe un operationId opaco. Con OLLAMA_API_KEY configurada, contiene una revisión firmada con HMAC-SHA256, válida diez minutos y vinculada a Authorization/Cookie. La clave usa un dominio de firma separado; nunca viaja al navegador. Otra instancia puede recuperar la operación canónica, pero no acepta modificaciones del cuerpo, cambios de sesión, firmas de otra clave ni revisiones vencidas. La confirmación conserva el UUID original para Idempotency-Key y el ticket estable de venta. Sin clave, el modo local conserva revisiones en memoria.
 
-**Límite actual:** recibos en memoria para una instancia Node, podados tras 24 horas al preparar operaciones, con hasta 1,000 revisiones retenidas. Reinicios y varias instancias requieren idempotencia persistente en Spring Boot. La app actual no tiene sesión autenticada; no debe usarse para operaciones públicas sin autorización y permisos del backend. No se introdujo un segundo sistema de autenticación.
+Repetir una confirmación dentro de la misma instancia reutiliza su promesa de ejecución. Después de guardar, el servidor devuelve un recibo sin llamar al modelo; si la API devuelve stockResultante, muestra ese valor directamente. Un fallo incierto puede devolver actionMayHaveRun:true; la UI advierte y actualiza los datos, sin reenviar automáticamente la escritura.
+
+**Límite actual:** recibos en memoria por instancia, hasta 1,000, podados tras 24 horas al preparar operaciones. Las firmas conservan la revisión entre instancias, pero no impiden repetir una escritura en instancias distintas. El backend inspeccionado no implementa Idempotency-Key para movimientos de existencias; debe persistir la idempotencia. Los tickets de venta se rechazan si ya existen. Spring también debe aplicar permisos: la app aún no tiene sesión autenticada.
+
+Softy limita las consultas al negocio con intents cerrados, herramientas permitidas por tarea y filtrado de acciones y navegación antes de renderizar. Rechaza literatura, cambios de rol y consultas ajenas; una solicitud mezclada se rechaza completa. La selección semántica sigue dependiendo del modelo: no se garantiza un bloqueo del 100 % de prompt injection.
 
 ## Voz
 
@@ -89,14 +100,14 @@ Sin soporte, permiso, micrófono o servicio disponible se muestra un mensaje y s
 - `src/softy-contract.ts`: acciones, páginas y respuesta de revisión compartidas.
 - `server/host.ts`: cliente REST, herramientas de lectura y operaciones canónicas.
 - `server/softy.ts`: validación, contexto, revisiones, deduplicación y motor Maya.
-- `server/index.ts`: Ollama, MSW de demo, proxy de negocio y archivos de producción.
+- `server/app.ts`, `api/softy.ts`: Ollama, proxy, archivos de producción y función Vercel; `server/index.ts` abre el puerto local.
 - `vendor/maya-portable/`: fuentes originales del ZIP. Cambios: `useRef` compatible con React 19, límite de 200 componentes / profundidad 12, esquemas de salida para plan y pantalla y contexto Ollama de 8,192 tokens. React se comparte con la app, sin una segunda instalación en vendor.
 
 El catálogo de Softy contiene Card, Section, Grid, Stack, Text, AlertBanner, StatTile, BarChart, ActionButton, QuickSuggestions, StockForm y SaleForm. El paquete conserva su catálogo general; Softy limita las opciones del modelo para generar interfaces simples. Los formularios del anfitrión seleccionan productos por nombre y piden cantidades, sin mostrar IDs internos. El esquema de salida asegura la estructura; no demuestra por sí solo que la interpretación o los datos del modelo sean correctos.
 
-`SOFTY_PORT` cambia el puerto Node y el destino del proxy Vite. `SOFTY_BIND` limita la escucha; el valor predeterminado es loopback. `SOFTTEK_API_URL` se requiere en modo real. Ningún modelo ni secreto se expone con prefijo `VITE_`. `.env.local` está ignorado por Git. La integración local ya no usa Gemini ni su clave.
+SOFTY_PORT cambia el puerto Node y el destino del proxy Vite. SOFTY_BIND limita la escucha; el valor predeterminado es loopback. SOFTTEK_API_URL permite cambiar el backend de Render predeterminado. Ningún modelo ni secreto se expone con prefijo VITE_. `.env.local` y `.vercel/` están ignorados por Git.
 
-Para servir la compilación: `npm run build` y `npm start`; abre `http://127.0.0.1:3001/softy`. Para despliegue conserva las fuentes y dependencias runtime del servidor y usa HTTPS/proxy inverso. Al cambiar el modo de datos, recompila y reinicia para que navegador y servidor coincidan. El health HTTP solo demuestra que Node está activo, **no que Ollama haya generado una interfaz**.
+Para servir la compilación: `npm run build` y `npm start`; abre `http://127.0.0.1:3001/softy`. En Vercel usa el preset Vite, `npm run build` y salida dist; la API se compila aparte desde api/softy.ts. El health solo demuestra que el servidor está activo y la clave presente, **no su validez ni que Ollama haya generado una interfaz**.
 
 ## Pruebas realizadas y pendientes
 
@@ -110,7 +121,7 @@ npm run build:portable
 npm run build:demo
 ```
 
-La suite reúne 58 pruebas del proyecto, integración y paquete. El ZIP se comprobó inicialmente con sus 21 pruebas, compilación, tipos y demo antes de adaptarlo. La regresión de inventario verifica que la herramienta conserve las cifras de la API y solo incluya productos con stock bajo o agotados. La prueba HTTP local del paquete exige esquemas en ambas etapas; la prueba de transporte Cloud comprueba su omisión, la cabecera de autorización y think:false. Se verifica que errores 401/403/429 no provocan reintentos, y que la recuperación del dictado no requiere onend. El servidor verifica también recibos independientes del modelo, deduplicación concurrente y eliminación de botones con cantidades preseleccionadas. Otra regresión conserva la última página de negocio al navegar y recargar sin enviar otra consulta.
+La suite reúne 85 pruebas del proyecto, integración y paquete. El ZIP se comprobó inicialmente con sus 21 pruebas, compilación, tipos y demo antes de adaptarlo. La regresión de inventario verifica que la herramienta conserve las cifras de la API y solo incluya productos con stock bajo o agotados. La prueba HTTP local del paquete exige esquemas en ambas etapas; la prueba de transporte Cloud comprueba su omisión, la cabecera de autorización y think:false. Se verifica que errores 401/403/429 no provocan reintentos, y que la recuperación del dictado no requiere onend. El servidor verifica también recibos independientes del modelo, deduplicación concurrente y eliminación de botones con cantidades preseleccionadas. Otra regresión conserva la última página de negocio al navegar y recargar sin enviar otra consulta.
 
 | Comprobación | Evidencia / alcance |
 | --- | --- |
@@ -120,10 +131,13 @@ La suite reúne 58 pruebas del proyecto, integración y paquete. El ZIP se compr
 | Confirmación, valores editados y controles | Pruebas React y API; sin operaciones antes de confirmar |
 | Duplicados, concurrencia, JSON inválido y fallo tras acción | Pruebas del servidor y motor con proveedor controlado; recibos de Softy sin generación del modelo |
 | Diseño y operación de existencias | Navegador con proveedor controlado y datos de ejemplo; escritorio y móvil |
-| Ollama Cloud / Gemma real | HTTP y navegador con gemma4:31b; cifras verificadas y tiempos de 1.60–3.27 s |
+| Ollama Cloud / Gemma real (prueba inicial) | Datos MSW: HTTP y navegador con gemma4:31b; tiempos de 1.60–3.27 s |
+| Gemma Cloud + Spring real (10 octubre 2026) | Reposición en 4.44 s; cuatro cifras cotejadas con Render. La misma consulta en Vercel CLI local: 5.89 s. Rechazo de resumen de novela: 8.47 s. |
+| Función y rutas de Vercel | Build de producción con ajustes del proyecto sofftek; HTTP real en Vercel CLI local para health, chat y actions/prepare. Revisión real preparada, sin guardar. |
+| Revisiones entre instancias | Pruebas simuladas: recuperación firmada, concurrencia, firma inválida, otra sesión, payload alterado y vencimiento. |
 | Ollama / Gemma local real | Probado: reposición, formulario de existencias y lectura del stock actualizado; detalles abajo |
 | Micrófono físico y PWA en dispositivos | No realizados; el usuario pidió probar solo texto en esta ronda |
-| Spring Boot del equipo | Pendiente de URL disponible y contrato compatible |
+| Spring Boot del equipo | Lecturas reales y adaptación de DTO verificadas en Render; sin escrituras reales en esta ronda. |
 
 La revisión visual inicial cubrió escritorio de 1440 px con proveedor controlado y el breakpoint móvil de 496 px en el navegador integrado, sin desbordamiento horizontal y con controles de 44 px o más. El flujo visual de stock pasó de 8 a 13 unidades y Productos reflejó el mismo dato. `npm start` respondió 200 para `/softy`, health y la API de productos. La prueba posterior con Gemma real se detalla a continuación; la prueba en un celular físico sigue pendiente.
 

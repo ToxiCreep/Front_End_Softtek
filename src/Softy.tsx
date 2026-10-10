@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router'
 import { ArrowUp, Mic, Sparkles, Square, X } from 'lucide-react'
-import { createMayaClient, MayaHttpError } from '../vendor/maya-portable/src/browser/index.js'
+import { createMayaClient, MayaHttpError, readMayaResponse } from '../vendor/maya-portable/src/browser/index.js'
 import { A2UIRenderer, useVoiceInput } from '../vendor/maya-portable/src/react/index.js'
 import type { ComponentRendererProps } from '../vendor/maya-portable/src/react/A2UIRenderer.js'
 import { normalizeA2UIScreen } from '../vendor/maya-portable/src/core/protocol.js'
@@ -91,9 +91,7 @@ export default function Softy() {
       preparingRef.current = true; setPreparing(true)
       try {
         const response = await fetch('/api/softy/actions/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(action), signal: AbortSignal.timeout(30_000) })
-        const body = await response.json()
-        if (!response.ok) throw new Error(body.error || 'No pudimos preparar la operación.')
-        setReview(body as ActionReview)
+        setReview(await readMayaResponse<ActionReview>(response))
       } catch (error) { setActionError(error instanceof Error ? error.message : 'No pudimos preparar la operación.') }
       finally { preparingRef.current = false; setPreparing(false) }
       return

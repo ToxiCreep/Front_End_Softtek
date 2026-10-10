@@ -1,7 +1,7 @@
 /**
  * Traduce entre el contrato que usan las páginas (contracts/openapi.json) y la API real
- * de Spring Boot. Se usa solo cuando VITE_USE_MOCKS=false: en el navegador desde api()
- * y en el servidor de Softy desde createHost(). Los mocks ya hablan el contrato de las páginas.
+ * de Spring Boot. Se usa en el navegador desde api() y en el servidor de Softy desde
+ * createHost(). Las fixtures de las pruebas ya hablan el contrato de las páginas.
  *
  * Endpoints nuevos (empleados, plantillas, contexto, etc.) usan directamente la forma
  * del backend (src/backend-types.ts) y pasan sin cambios.

@@ -19,18 +19,19 @@ const initialPromotions = structuredClone(promotions), initialIA = configuration
 const servers: Server[] = []
 beforeAll(() => mockApi.listen({ onUnhandledRequest: 'bypass' }))
 afterEach(async () => {
+  vi.restoreAllMocks()
   products[0].stockActual = initialStock; sales.splice(initialSales); movements.splice(initialMovements)
   promotions.splice(0, promotions.length, ...structuredClone(initialPromotions)); configuration.proveedorIA = initialIA
   await Promise.all(servers.splice(0).map(server => new Promise<void>(resolve => server.close(() => resolve()))))
 })
 afterAll(() => mockApi.close())
-async function start(provider?: ModelProvider) {
+async function start(provider?: ModelProvider, signingKey?: string) {
   const host = createHost(base)
-  const app = express(); app.use(express.json()); app.use('/api/softy', createSoftyRouter(provider, () => host))
+  const app = express(); app.use(express.json()); app.use('/api/softy', createSoftyRouter(provider, () => host, signingKey))
   const server = app.listen(0, '127.0.0.1'); servers.push(server)
   await new Promise<void>(resolve => server.once('listening', resolve))
   const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/softy`
-  return { host, post: async (path: string, body: unknown) => { const response = await fetch(url + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return { status: response.status, body: await response.json() } } }
+  return { host, post: async (path: string, body: unknown, headers: Record<string, string> = {}) => { const response = await fetch(url + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) }); return { status: response.status, body: await response.json() } } }
 }
 function fakeProvider(failScreen = false) {
   const generate = vi.fn(async (request: ModelRequest) => {
@@ -80,6 +81,36 @@ it('entrega inventario compacto conservando existencias y recomendaciones de la 
   expect(result.find(item => item.productoId === 7)).toMatchObject({ stockActual: 0, estado: 'AGOTADO' })
   const pedidos = await createHost(base).call<{ productoId: number; cantidadAPedir: number }[]>('/inventario/reabasto')
   expect(result[0].cantidadSugeridaAPedir).toBe(pedidos.find(item => item.productoId === 1)!.cantidadAPedir)
+})
+it('conserva una revisión firmada entre instancias y deduplica confirmaciones concurrentes en la receptora', async () => {
+  const provider = fakeProvider(true)
+  const preparing = await start(provider, 'test-signing-secret'), confirming = await start(provider, 'test-signing-secret')
+  const { body: review } = await preparing.post('/actions/prepare', { type: 'ADD_STOCK', payload: { productoId: products[0].id, cantidad: 2, motivo: 'Prueba' } })
+  const request = { message: 'Guardar', action: review.action, context: { operationId: review.operationId } }
+  const [first, second] = await Promise.all([confirming.post('/chat', request), confirming.post('/chat', request)])
+  expect(first.status).toBe(200); expect(second.body).toEqual(first.body)
+  expect(products[0].stockActual).toBe(initialStock + 2)
+  expect(movements).toHaveLength(initialMovements + 1)
+  expect(provider.generate).not.toHaveBeenCalled()
+})
+it('rechaza revisiones alteradas, de otra sesión, vencidas o firmadas con otra clave antes de escribir', async () => {
+  const provider = fakeProvider(), api = await start(provider, 'test-signing-secret')
+  const headers = { Authorization: 'Bearer test-owner', Cookie: 'session=test-owner' }
+  const { body: review } = await api.post('/actions/prepare', { type: 'ADD_STOCK', payload: { productoId: products[0].id, cantidad: 2, motivo: 'Prueba' } }, headers)
+  const request = { message: 'Guardar', action: review.action, context: { operationId: review.operationId } }
+  const [payload, signature] = review.operationId.split('.')
+  const altered = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')); altered.body.cantidad = 500
+  const forged = `${Buffer.from(JSON.stringify(altered)).toString('base64url')}.${signature}`
+  expect((await api.post('/chat', { ...request, context: { operationId: forged } }, headers)).status).toBe(400)
+  expect((await api.post('/chat', request)).status).toBe(400)
+  expect((await api.post('/chat', { ...request, action: { ...review.action, payload: { ...review.action.payload, cantidad: 3 } } }, headers)).status).toBe(400)
+  const wrongKey = await start(provider, 'another-signing-secret')
+  expect((await wrongKey.post('/chat', request, headers)).status).toBe(400)
+  vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 600_001)
+  expect((await api.post('/chat', request, headers)).status).toBe(400)
+  expect(products[0].stockActual).toBe(initialStock)
+  expect(movements).toHaveLength(initialMovements)
+  expect(provider.generate).not.toHaveBeenCalled()
 })
 it('guarda una entrada revisada y devuelve su recibo sin depender del modelo ni duplicar peticiones', async () => {
   const provider = fakeProvider(true), api = await start(provider)

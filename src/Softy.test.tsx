@@ -105,6 +105,16 @@ it('una escritura generada se prepara y se revisa antes de enviarla al motor', a
   await waitFor(() => expect(process).toHaveBeenCalledTimes(2))
   expect(process.mock.calls[1][0]).toMatchObject({ action, context: { operationId: 'operation-1' }, screen: initial })
 })
+it('una preparación con respuesta vacía muestra un error legible y no abre la confirmación', async () => {
+  const process = vi.fn(async () => ({ ...generated, components: [{ id: 'activate', type: 'ActionButton', props: { label: 'Activar promoción', actionType: 'ACTIVATE_PROMOTION', payload: { promocionId: 1 } } }] }))
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 405 })))
+  mount({ process })
+  await userEvent.click(screen.getByRole('button', { name: '¿Qué productos necesito reponer?' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Activar promoción' }))
+  expect((await screen.findByRole('alert')).textContent).toContain('El servidor no devolvió una respuesta válida')
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(process).toHaveBeenCalledOnce()
+})
 it('selectores y sliders transmiten el valor actualizado y conservan el payload del anfitrión', async () => {
   const onAction = vi.fn()
   render(<A2UIRenderer screen={{ ...generated, components: [

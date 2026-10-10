@@ -4,7 +4,7 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createMaya, createOllamaProvider } from '../src/core/index.js';
 import { createMayaRouter } from '../src/server/index.js';
-import { createMayaClient } from '../src/browser/client.js';
+import { createMayaClient, readMayaResponse } from '../src/browser/client.js';
 import { taskScreen } from './fixtures.js';
 
 const servers: Server[] = [];
@@ -68,4 +68,24 @@ it('returns a structured error when model generation fails after an action', asy
   await expect(createMayaClient({ endpoint: `${host}/api/maya/chat` }).process({ message: 'Acción', action: { type: 'CUSTOM' } }))
     .rejects.toMatchObject({ status: 502, actionMayHaveRun: true });
   expect(actions).toBe(1);
+});
+
+it.each([
+  [405, ''],
+  [200, '<!doctype html><html>SPA fallback</html>'],
+  [504, '{"error":'],
+])('reports a readable HTTP error for status %i with an invalid JSON body', async (status, body) => {
+  const client = createMayaClient({ fetch: async () => new Response(body, { status }) });
+  await expect(client.process({ message: 'Consultar' })).rejects.toMatchObject({
+    name: 'MayaHttpError', status, actionMayHaveRun: false,
+    message: 'El servidor no devolvió una respuesta válida. Intenta de nuevo en un momento.',
+  });
+});
+
+it('preserves uncertain writes and explicit server rejections when parsing responses', async () => {
+  await expect(createMayaClient({ fetch: async () => new Response('', { status: 504 }) })
+    .process({ message: 'Guardar', action: { type: 'ADD_STOCK' } })).rejects.toMatchObject({ actionMayHaveRun: true });
+  await expect(readMayaResponse(new Response(JSON.stringify({ error: 'Stock insuficiente', actionMayHaveRun: false }), { status: 422 }), true))
+    .rejects.toMatchObject({ message: 'Stock insuficiente', status: 422, actionMayHaveRun: false });
+  await expect(readMayaResponse(new Response('', { status: 405 }))).rejects.toMatchObject({ actionMayHaveRun: false });
 });
