@@ -3,23 +3,27 @@ import type { MayaAction, MayaTool } from '../vendor/maya-portable/src/core/type
 import type { Schema } from '../src/api.js'
 import { exactMoney, iaProviders, shiftDate, today } from '../src/api.js'
 import { appRoutes, type ActionReview } from '../src/softy-contract.js'
+import { adaptRequest, adaptResponse } from '../src/adapters.js'
 
 export class HostError extends Error {
   constructor(message: string, public status = 400, public uncertain = false) { super(message) }
 }
 export type Host = ReturnType<typeof createHost>
-export function createHost(base: string, headers: Record<string, string> = {}) {
+/** adapt=true traduce entre el contrato de las páginas y Spring Boot (ver src/adapters.ts). */
+export function createHost(base: string, headers: Record<string, string> = {}, adapt = false) {
     async function request<T>(path: string, method = 'GET', body?: unknown, operationId?: string): Promise<{ body: T; status: number }> {
       let response: Response
+      if (adapt && body !== undefined) body = adaptRequest(path, method, body)
       try {
         response = await fetch(`${base}${path}`, { method, headers: { ...headers, 'Content-Type': 'application/json',
           ...(operationId ? { 'Idempotency-Key': operationId } : {}) },
           ...(body !== undefined ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(30_000) })
       } catch { throw new HostError('No pudimos conectar con los datos de la sucursal. Revisa el resultado antes de repetir una operación.', 502, method !== 'GET') }
+      if (response.ok && response.status === 204) return { body: null as T, status: 204 }
       const result = await response.json().catch(() => null)
       if (!response.ok) throw new HostError(typeof result?.mensaje === 'string' ? result.mensaje : 'La API de la sucursal rechazó la solicitud.', response.status, response.status >= 500 && method !== 'GET')
       if (result === null) throw new HostError('La API no devolvió JSON válido.', 502, method !== 'GET')
-      return { body: result as T, status: response.status }
+      return { body: (adapt ? adaptResponse(path, method, result) : result) as T, status: response.status }
   }
   return { request, async call<T>(path: string, method = 'GET', body?: unknown, operationId?: string): Promise<T> { return (await request<T>(path, method, body, operationId)).body } }
 }

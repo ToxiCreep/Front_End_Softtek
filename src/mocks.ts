@@ -1,6 +1,7 @@
 import { http, HttpResponse, delay } from 'msw'
 import { apiBase, iaProviders, shiftDate, today } from './api'
 import type { Schema } from './api'
+import { createExtraHandlers } from './mocks-extra'
 import { alerts, changePromotion, changeStock, configuration, generatePredictions, inventoryState, movements, predictions, products, promotions, sales, summarize } from './demo'
 
 const error = (mensaje: string, status = 422) => HttpResponse.json({ status, error: status === 409 ? 'CONFLICTO' : 'REGLA_NEGOCIO', mensaje, campos: {} }, { status })
@@ -155,6 +156,7 @@ return [
     }
     return HttpResponse.json(result)
   }),
+  ...createExtraHandlers(endpoint),
 ]
 }
 export const handlers = createHandlers()

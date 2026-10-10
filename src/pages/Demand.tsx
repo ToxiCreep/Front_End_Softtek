@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 import { api, quantity, shiftDate, shortDate, today } from '../api'
 import type { Schema } from '../api'
 import { Chart, Empty, ErrorState, Loading, Notice, PageTitle, SectionHeading, useOnline } from '../ui'
+import type { PrediccionDetalle, Precision } from '../backend-types'
 
 export default function Demand() {
   const client = useQueryClient()
@@ -31,6 +32,27 @@ export default function Demand() {
       <section className="panel demand-chart"><SectionHeading title="Estimación por día" />{comparison.data.some(p => p.base || (configuration.data.proveedorIA && p.ia)) ? <Chart dates={comparison.data.map(p => p.fecha)} series={[{ label: 'Cálculo básico', color: 'var(--chart-blue)', values: comparison.data.map(p => p.base?.cantidadPredicha ?? null) }, ...(configuration.data.proveedorIA ? [{ label: 'Con inteligencia artificial', color: 'var(--chart-green)', values: comparison.data.map(p => p.ia?.cantidadPredicha ?? null) }] : [])]} description={`Unidades estimadas de ${product?.nombre} para cada uno de los próximos 7 días. Son estimaciones, no ventas realizadas.`} /> : <Empty title="Todavía no hay una estimación" description="Usa Actualizar estimación para calcular los próximos 7 días." />}</section>
       {reorders.isError && <Notice error message="No pudimos cargar el pedido sugerido." />}
       <section className="panel reorder-panel"><div><h2>Para tu próximo pedido</h2>{reorder && !reorders.isError && <><p className="reorder-guidance">Con tus existencias actuales, se sugiere pedir {quantity(reorder.cantidadAPedir)} unidades.</p><dl><div><dt>Existencias recomendadas</dt><dd>{reorder.stockRecomendado} unidades</dd></div><div><dt>Fecha recomendada</dt><dd>{shortDate(reorder.fechaObjetivo)}</dd></div></dl></>}</div><Link to="/inventario" className="button outlined">Revisar existencias<ArrowRight size={17} aria-hidden="true" /></Link></section>
+      <Detalle productoId={Number(id)} desde={from} hasta={until} />
+      <PrecisionModelos />
     </>}
   </>
+}
+
+/** Predicciones guardadas con su rango probable (GET /predicciones). */
+function Detalle({ productoId, desde, hasta }: { productoId: number; desde: string; hasta: string }) {
+  const lista = useQuery({ queryKey: ['comparacion', 'detalle', productoId, desde], queryFn: () => api<PrediccionDetalle[]>(`/predicciones?productoId=${productoId}&desde=${desde}&hasta=${hasta}`) })
+  if (lista.isPending || lista.isError || !Array.isArray(lista.data) || !lista.data.length) return null
+  return <section className="panel page-section"><SectionHeading title="Detalle de la estimación" description="Rango probable de venta por día y lo que convendría tener en existencia." />
+    <div className="table-scroll"><table><thead><tr><th>Fecha</th><th>Cálculo</th><th>Venta estimada</th><th>Rango probable</th><th>Existencia recomendada</th><th>Pedir</th></tr></thead>
+      <tbody>{lista.data.map(p => <tr key={p.id}><td>{shortDate(p.fechaObjetivo)}</td><td>{p.modelo === 'IA' ? 'Con IA' : 'Básico'}</td><td>{quantity(p.cantidadPredicha)}</td><td>{quantity(p.limiteInferior)} – {quantity(p.limiteSuperior)}</td><td>{p.stockRecomendado}</td><td>{p.cantidadAPedir}</td></tr>)}</tbody></table></div>
+  </section>
+}
+
+/** Qué tan bien le atinó cada modelo a las ventas reales (GET /predicciones/precision). */
+function PrecisionModelos() {
+  const precision = useQuery({ queryKey: ['precision'], queryFn: () => api<Precision>('/predicciones/precision') })
+  if (precision.isPending || precision.isError || !Array.isArray(precision.data?.modelos) || !precision.data.modelos.length) return null
+  return <section className="panel page-section"><SectionHeading title="Qué tan precisas han sido las estimaciones" description={`Comparación contra ventas reales del ${shortDate(precision.data.desde)} al ${shortDate(precision.data.hasta)}.`} />
+    <div className="result-grid">{precision.data.modelos.map(m => <div key={m.modelo}><span>{m.modelo === 'IA' ? 'Con inteligencia artificial' : 'Cálculo básico'} · {m.puntos} días-producto · error ponderado {quantity(m.wape)}%</span><strong>{quantity(m.precision)}%</strong></div>)}</div>
+  </section>
 }

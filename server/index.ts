@@ -19,14 +19,20 @@ const defaultModel = cloud ? 'gemma4:31b' : 'gemma3:4b'
 const provider = cloud && !process.env.OLLAMA_API_KEY ? undefined : createOllamaProvider({ host: ollamaHost,
   apiKey: process.env.OLLAMA_API_KEY, model: process.env.A2UI_MODEL || defaultModel,
   planningModel: process.env.OLLAMA_MODEL || defaultModel, timeoutMs: 60_000 })
-const hostFor = (req: express.Request) => createHost(base, { ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}), ...(req.headers.cookie ? { Cookie: req.headers.cookie } : {}) })
+const forwarded = (req: express.Request) => ({ ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}), ...(req.headers.cookie ? { Cookie: req.headers.cookie } : {}) })
+// Softy lee los datos con el contrato de las páginas; el proxy /api/v1 los pasa sin tocar (el navegador los adapta).
+const hostFor = (req: express.Request) => createHost(base, forwarded(req), !mocks)
+const rawHostFor = (req: express.Request) => createHost(base, forwarded(req))
 const app = express()
 app.disable('x-powered-by')
 app.use(express.json({ limit: '256kb' }))
 app.use('/api/softy', createSoftyRouter(provider, hostFor))
 app.use('/api/v1', async (req, res) => {
-  if (!['GET', 'POST', 'PATCH'].includes(req.method)) { res.status(405).json({ mensaje: 'Método no disponible.' }); return }
-  try { const result = await hostFor(req).request(req.url, req.method, req.method === 'GET' ? undefined : req.body); res.status(result.status).json(result.body) }
+  if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) { res.status(405).json({ mensaje: 'Método no disponible.' }); return }
+  try {
+    const result = await rawHostFor(req).request(req.url, req.method, ['GET', 'DELETE'].includes(req.method) ? undefined : req.body)
+    if (result.status === 204) res.status(204).end(); else res.status(result.status).json(result.body)
+  }
   catch (error) { res.status(error && typeof error === 'object' && 'status' in error ? Number(error.status) : 502).json({ mensaje: error instanceof Error ? error.message : 'No pudimos conectar con la sucursal.' }) }
 })
 app.use('/api', (_req, res) => { res.status(404).json({ error: 'Ruta no disponible.' }) })

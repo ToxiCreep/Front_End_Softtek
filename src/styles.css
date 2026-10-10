@@ -57,3 +57,19 @@
 @media(max-width:760px){.mobile-nav{height:calc(72px + env(safe-area-inset-bottom))}.mobile-sale{display:block;position:fixed;left:0;right:0;bottom:calc(72px + env(safe-area-inset-bottom));padding:12px 20px;z-index:19;background:linear-gradient(transparent,var(--canvas) 25%)}main{padding-bottom:calc(180px + env(safe-area-inset-bottom))}}
 
 .settings-provider{margin-top:22px}
+
+/* Secciones agregadas para los endpoints nuevos (ventas, personal, calendario, ajustes) */
+.page-section{margin-top:24px}.page-section>.section-heading select,.heading-actions select,.filter-row select{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;padding:10px 12px;min-height:44px;font-size:13px}
+.heading-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.heading-end{margin-left:auto}
+.filter-row{display:flex;gap:16px;flex-wrap:wrap;align-items:end;margin:20px 0 0}.filter-row label{display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted)}
+.row-actions{display:flex;gap:4px;justify-content:end;align-items:center;white-space:nowrap}.cell-note{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+.form-two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.check-label{flex-direction:row!important;align-items:center;gap:10px!important;font-weight:400!important}.check-label input{width:20px!important;min-height:20px!important;height:20px}
+.stack-form textarea{border:1px solid var(--input-border);border-radius:10px;padding:12px 13px;background:var(--surface);color:var(--text);width:100%;font:13px/1.5 ui-monospace,monospace;resize:vertical}
+.note-list{font-size:13px;color:var(--muted);line-height:1.7;padding-left:18px}
+.record-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}.record-card{display:flex;flex-direction:column;gap:8px}.record-card strong{font-size:20px;font-weight:500;line-height:1.3}.record-card>span{font-size:12px;color:var(--muted)}
+.link-button{background:transparent;color:var(--text);text-decoration:underline;padding:0;font-size:inherit;min-height:0;text-align:left}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px;font-size:12px;color:var(--muted)}
+.search-form{display:contents}.loss-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-bottom:16px}.ia-diagnostico{margin-top:18px}
+.status-deficit,.status-justo,.status-exceso,.status-ok,.status-sin_datos{background:var(--soft-blue);color:var(--muted)}
+@media(max-width:760px){.mobile-nav{justify-content:flex-start;overflow-x:auto;scrollbar-width:none}.mobile-nav a{flex:0 0 68px}.form-two{grid-template-columns:1fr}.pager{flex-direction:column}}
+.limit-grid+.settings-guidance{margin-top:18px}

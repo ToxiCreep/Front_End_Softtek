@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Route, Routes, Link, useLocation } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { Box, ChartNoAxesCombined, ChevronRight, CircleHelp, Home, ReceiptText, Settings2, Sparkles, Store, Tag, WifiOff } from 'lucide-react'
+import { Box, CalendarDays, ChartNoAxesCombined, ChevronRight, CircleHelp, Home, ReceiptText, Settings2, Sparkles, Store, Tag, Users, WifiOff } from 'lucide-react'
 import { api, today, useMocks } from './api'
 import type { Schema } from './api'
 import { Modal, useOnline } from './ui'
@@ -10,13 +10,19 @@ import Inventory from './pages/Inventory'
 import Promotions from './pages/Promotions'
 import Demand from './pages/Demand'
 import Settings from './pages/Settings'
+import Sales from './pages/Sales'
+import Staff from './pages/Staff'
+import Calendar from './pages/Calendar'
 import Softy from './Softy'
 
 const navigation = [
   { to: '/', label: 'Inicio', icon: Home },
   { to: '/inventario', label: 'Productos', icon: Box },
+  { to: '/ventas', label: 'Ventas', icon: ReceiptText },
   { to: '/promociones', label: 'Promociones', icon: Tag },
   { to: '/demanda', label: 'Demanda', icon: ChartNoAxesCombined },
+  { to: '/personal', label: 'Personal', icon: Users },
+  { to: '/calendario', label: 'Calendario', icon: CalendarDays },
   { to: '/ajustes', label: 'Ajustes', icon: Settings2 },
 ]
 
@@ -60,7 +66,7 @@ export default function App() {
       </header>
       {!online && <div className="offline-banner" role="alert"><WifiOff size={19} aria-hidden="true" />Sin conexión. Conéctate para guardar cambios.</div>}
       <main id="main-content" tabIndex={-1}>
-        <Routes><Route path="/" element={<Dashboard />} /><Route path="/inventario" element={<Inventory />} /><Route path="/promociones" element={<Promotions />} /><Route path="/demanda" element={<Demand />} /><Route path="/ajustes" element={<Settings />} /><Route path="/softy" element={<Softy />} /><Route path="*" element={<div className="empty"><h1>No encontramos esta página</h1><Link className="button primary" to="/">Volver al inicio</Link></div>} /></Routes>
+        <Routes><Route path="/" element={<Dashboard />} /><Route path="/inventario" element={<Inventory />} /><Route path="/promociones" element={<Promotions />} /><Route path="/demanda" element={<Demand />} /><Route path="/ventas" element={<Sales />} /><Route path="/personal" element={<Staff />} /><Route path="/calendario" element={<Calendar />} /><Route path="/ajustes" element={<Settings />} /><Route path="/softy" element={<Softy />} /><Route path="*" element={<div className="empty"><h1>No encontramos esta página</h1><Link className="button primary" to="/">Volver al inicio</Link></div>} /></Routes>
       </main>
       <div className="mobile-sale">{saleAction}</div>
       {nav(true)}
