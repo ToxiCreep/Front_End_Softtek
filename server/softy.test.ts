@@ -260,3 +260,36 @@ it('limita árboles de componentes recibidos del modelo o del navegador', () => 
   for (let i = 0; i < 14; i++) component = { id: String(i), type: 'Card', props: {}, children: [component] }
   expect(() => normalizeA2UIScreen({ components: [component] })).toThrow('límite')
 })
+
+it('ordena rankings por ganancia, limita grupos y rechaza argumentos no autorizados', async () => {
+  const host = createHost(base)
+  const rows = [
+    { periodo: '1', etiqueta: 'Más ventas', ingresos: 1000, margen: -5, unidades: 20, costo: 1005, tickets: 10 },
+    { periodo: '2', etiqueta: 'Más ganancia', ingresos: 200, margen: 80, unidades: 4, costo: 120, tickets: 2 },
+  ]
+  const call = vi.spyOn(host, 'call').mockResolvedValue(rows)
+  const tool = hostTools(host).find(t => t.name === 'get_sales_breakdown')!
+  const result = await tool.execute({ agrupar: 'producto', ordenar: 'margen', limite: 1 }, { message: '' })
+  expect(result).toMatchObject({ totalGrupos: 2, filas: [rows[1]] })
+  expect(call.mock.calls[0][0]).toContain('agrupar=producto')
+  for (const args of [{ agrupar: '/secreto' }, { agrupar: ['producto'] }, { ordenar: 'costo' }, { limite: 11 }, { limite: 0 }, { endpoint: '/secretos' }]) await expect(tool.execute(args, { message: '' })).rejects.toThrow()
+  expect(call).toHaveBeenCalledOnce()
+})
+
+it('las pérdidas usan solo lectura y validan el periodo antes de consultar', async () => {
+  const host = createHost(base)
+  const call = vi.spyOn(host, 'call').mockResolvedValue({ total: 5, porDia: [{ fecha: '2026-10-01', total: 5 }] })
+  const tool = hostTools(host).find(t => t.name === 'get_losses')!
+  expect(await tool.execute({ desde: '2026-10-01', hasta: '2026-10-07' }, { message: '' })).toMatchObject({ total: 5 })
+  expect(call).toHaveBeenCalledWith('/inventario/perdidas?desde=2026-10-01&hasta=2026-10-07')
+  expect(() => tool.execute({ desde: '2026-10-01', hasta: '2026-12-01' }, { message: '' })).toThrow()
+  expect(call).toHaveBeenCalledOnce()
+})
+
+it('permite tendencias consultadas por Softy y rechaza una gráfica con cifras inválidas', async () => {
+  const provider: ModelProvider = { generate: async request => request.purpose === 'plan' ? '{"intent":"SALES","tools":[{"name":"get_sales","args":{}}]}' : JSON.stringify({ components: [{ id: 'trend', type: 'LineChart', props: { title: 'Ventas', dates: ['2026-10-01'], series: [{ label: 'Ingresos', values: [100] }], currency: true } }] }) }
+  const api = await start(provider)
+  expect((await api.post('/chat', { message: 'Gráfica de ventas' })).body.components[0].type).toBe('LineChart')
+  provider.generate = async request => request.purpose === 'plan' ? '{"intent":"SALES","tools":[{"name":"get_sales","args":{}}]}' : JSON.stringify({ components: [{ id: 'bad', type: 'LineChart', props: { dates: ['2026-10-01'], series: [{ label: 'Ingresos', values: ['desconocido'] }] } }] })
+  expect((await api.post('/chat', { message: 'Gráfica de ventas' })).status).toBe(502)
+})

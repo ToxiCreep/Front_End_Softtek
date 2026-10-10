@@ -4,7 +4,7 @@ import { Award, CalendarDays, Clock, ReceiptText, Star, TrendingUp, UserRound } 
 import { api, exactMoney, money, quantity, shiftDate, shortDate, today } from '../api'
 import { fechaHora } from '../backend-types'
 import type { Pagina, RecordsVentas, ResumenAgrupado, Ticket, VentaLinea } from '../backend-types'
-import { Empty, ErrorState, Loading, Modal, PageTitle, SectionHeading } from '../ui'
+import { BarChart, Chart, Empty, ErrorState, Loading, Modal, PageTitle, SectionHeading } from '../ui'
 
 const agrupaciones = { categoria: 'Categoría', producto: 'Producto', diaSemana: 'Día de la semana', hora: 'Hora del día', semana: 'Semana', mes: 'Mes' } as const
 type Agrupar = keyof typeof agrupaciones
@@ -18,8 +18,11 @@ export default function Sales() {
   const query = `desde=${desde}&hasta=${today()}`
   const records = useQuery({ queryKey: ['ventas', 'records', desde], queryFn: () => api<RecordsVentas>(`/ventas/records?${query}`) })
   const resumen = useQuery({ queryKey: ['ventas', 'resumen', desde, agrupar], queryFn: () => api<ResumenAgrupado[]>(`/ventas/resumen?${query}&agrupar=${agrupar}`) })
+  const daily = useQuery({ queryKey: ['ventas', 'diarias', desde], queryFn: () => api<ResumenAgrupado[]>(`/ventas/resumen?${query}&agrupar=dia`) })
   const historial = useQuery({ queryKey: ['ventas', 'lista', desde, page], queryFn: () => api<Pagina<VentaLinea>>(`/ventas?${query}&page=${page}&size=20`) })
   const r = records.data
+  const ranking = agrupar === 'producto' || agrupar === 'categoria'
+  const chartRows = ranking ? [...(resumen.data || [])].sort((a, b) => b.ingresos - a.ingresos).slice(0, 8) : resumen.data || []
 
   return <>
     <PageTitle title="Ventas" description="Tus récords, cómo se reparten las ventas y el detalle de cada ticket." />
@@ -44,10 +47,16 @@ export default function Sales() {
       </div></section>
     </>}
 
+    <section className="panel page-section"><SectionHeading title="Ventas y ganancia por día" />
+      {daily.isPending ? <Loading /> : daily.isError ? <ErrorState error={daily.error} retry={() => daily.refetch()} /> : !daily.data.length ? <Empty title="Sin ventas en este periodo" description="Prueba con un periodo más largo." /> : <Chart dates={daily.data.map(d => d.periodo)} series={[{ label: 'Ingresos', color: 'var(--chart-blue)', values: daily.data.map(d => d.ingresos) }, { label: 'Ganancia bruta', color: 'var(--chart-green)', values: daily.data.map(d => d.margen) }]} currency description="Ingresos y ganancia bruta por día, en pesos mexicanos, para el periodo seleccionado." />}
+    </section>
+
     <section className="panel page-section"><SectionHeading title="Cómo se reparten las ventas"><select aria-label="Agrupar por" value={agrupar} onChange={e => setAgrupar(e.target.value as Agrupar)}>{Object.entries(agrupaciones).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></SectionHeading>
       {resumen.isPending ? <Loading /> : resumen.isError ? <ErrorState error={resumen.error} retry={() => resumen.refetch()} /> : !resumen.data.length ? <Empty title="Sin ventas en este periodo" description="Prueba con un periodo más largo." /> :
-        <div className="table-scroll"><table><thead><tr><th>{agrupaciones[agrupar]}</th><th>Unidades</th><th>Ingresos</th><th>Ganancia bruta</th><th>Tickets</th></tr></thead>
-          <tbody>{resumen.data.map(f => <tr key={f.periodo}><td>{f.etiqueta || f.periodo}</td><td>{f.unidades}</td><td>{exactMoney(f.ingresos)}</td><td>{exactMoney(f.margen)}</td><td>{f.tickets}</td></tr>)}</tbody></table></div>}
+        <><BarChart labels={chartRows.map(f => f.etiqueta || f.periodo)} series={[{ label: 'Ingresos', color: 'var(--chart-blue)', values: chartRows.map(f => f.ingresos) }, { label: 'Ganancia bruta', color: 'var(--chart-green)', values: chartRows.map(f => f.margen) }]} currency description={`Ingresos y ganancia por ${agrupaciones[agrupar].toLowerCase()} en el periodo seleccionado.`} />
+          {ranking && resumen.data.length > 8 && <p className="chart-note">Los 8 con más ingresos. El detalle incluye los {resumen.data.length}.</p>}
+          <details className="chart-table"><summary>Ver el detalle de las ventas</summary><div className="table-scroll"><table><thead><tr><th>{agrupaciones[agrupar]}</th><th>Unidades</th><th>Ingresos</th><th>Ganancia bruta</th><th>Tickets</th></tr></thead>
+          <tbody>{resumen.data.map(f => <tr key={f.periodo}><td>{f.etiqueta || f.periodo}</td><td>{f.unidades}</td><td>{exactMoney(f.ingresos)}</td><td>{exactMoney(f.margen)}</td><td>{f.tickets}</td></tr>)}</tbody></table></div></details></>}
     </section>
 
     <section className="panel page-section"><SectionHeading title="Historial de ventas" description="Cada renglón es un producto vendido. Abre el ticket para ver la venta completa." />

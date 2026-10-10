@@ -121,7 +121,7 @@ npm run build:portable
 npm run build:demo
 ```
 
-La suite reúne 90 pruebas del proyecto, integración y paquete. El ZIP se comprobó inicialmente con sus 21 pruebas, compilación, tipos y demo antes de adaptarlo. La regresión de inventario verifica que la herramienta conserve las cifras de la API y solo incluya productos con stock bajo o agotados. La prueba HTTP local del paquete exige esquemas en ambas etapas; la prueba de transporte Cloud comprueba su omisión, la cabecera de autorización y think:false. Se verifica que errores 401/403/429 no provocan reintentos, y que la recuperación del dictado no requiere onend. El servidor verifica también recibos independientes del modelo, deduplicación concurrente y eliminación de botones con cantidades preseleccionadas. Otra regresión conserva la última página de negocio al navegar y recargar sin enviar otra consulta.
+La suite reúne 99 pruebas del proyecto, integración y paquete. El ZIP se comprobó inicialmente con sus 21 pruebas, compilación, tipos y demo antes de adaptarlo. La regresión de inventario verifica que la herramienta conserve las cifras de la API y solo incluya productos con stock bajo o agotados. La prueba HTTP local del paquete exige esquemas en ambas etapas; la prueba de transporte Cloud comprueba su omisión, la cabecera de autorización y think:false. Se verifica que errores 401/403/429 no provocan reintentos, y que la recuperación del dictado no requiere onend. El servidor verifica también recibos independientes del modelo, deduplicación concurrente y eliminación de botones con cantidades preseleccionadas. Otra regresión conserva la última página de negocio al navegar y recargar sin enviar otra consulta.
 
 | Comprobación | Evidencia / alcance |
 | --- | --- |
@@ -184,3 +184,37 @@ Para repetir manualmente:
 3. Pide agregar existencias, selecciona un producto y cantidad, revisa y confirma. Comprueba la nueva cantidad en Productos.
 4. Dicta una frase y verifica un solo envío. Prueba Cancelar antes de terminar y permiso denegado; el texto debe seguir disponible.
 5. Repite el caso con `VITE_USE_MOCKS=false` cuando Spring Boot esté listo. Registra navegador, modelo, latencia y resultados por separado del ensayo simulado.
+
+## Gráficas de la app y de Softy
+
+La paleta usa azul Softtek claro, verde, amarillo y rojo sobre las superficies oscuras. Se conserva Helvetica Neue. Las líneas muestran tendencias; las barras horizontales muestran comparaciones y rankings. Las leyendas, patrones de línea y etiquetas permiten distinguir datos sin depender solo del color.
+
+- Inicio: tendencia de ingresos con área azul.
+- Ventas: ingresos y ganancia por día; comparación por categoría, producto, día de la semana, hora, semana o mes. Los rankings muestran los ocho grupos con más ingresos; el detalle mantiene todos los grupos.
+- Demanda: vista de existencias y pedido o estimación básica por día, sin la columna de IA en la gráfica y su tabla. Si faltan predicciones, el total indica cuántos días están disponibles (por ejemplo, 6 de 7). Los valores ausentes no se convierten en cero.
+- Personal: horas requeridas y disponibles por puesto, con el detalle de cobertura desplegable. La API no informa disponibilidad por turno; esta gráfica compara cobertura semanal.
+- Promos: ingresos y ganancia reales dentro de Ver resultados. No calcula un impacto antes/después si el backend no aporta una línea base.
+
+Softy admite `LineChart` y `BarChart` mediante renderizadores del anfitrión. Las pantallas antiguas de barras siguen funcionando. El servidor valida las fechas, longitudes, valores finitos y límites (31 etiquetas/fechas y 4 series); los colores enviados por el modelo se ignoran. Los controles y permisos existentes se conservan.
+
+Lecturas adicionales:
+
+| Herramienta | Datos |
+| --- | --- |
+| `get_sales_breakdown` | GET /ventas/resumen por producto, categoría, día de la semana u hora; ordena por ingresos, margen o unidades y devuelve hasta 10 grupos |
+| `get_losses` | GET /inventario/perdidas: pérdidas a costo por día, categoría y producto, cuando la API dispone de esas series |
+
+Consultas útiles: “Muéstrame una gráfica de los cinco productos que dejan más ganancia en los últimos 7 días”, “Compara las ventas de esta semana con la anterior” y “Muéstrame las pérdidas por día”. Las comparaciones usan lecturas del backend, sin ejecutar escrituras.
+
+No requiere nuevas dependencias ni variables de entorno. Conserva la configuración existente de Spring Boot y Ollama Cloud. Las pruebas automatizadas usan fixtures y proveedor simulado; la verificación de rankings y pérdidas con Spring Boot, y las consultas de Softy con Ollama Cloud, se registran por separado.
+
+
+### Verificación de gráficas — 10 de octubre de 2026
+
+- `npm test`: 98 pruebas aprobadas en 14 archivos. Los ensayos automatizados usan API y proveedor simulados; cubren valores negativos, cero, datos ausentes, compatibilidad con barras guardadas, validación de fechas y series, rankings por margen y pronósticos parciales.
+- Spring Boot real, mediante el proxy local: ranking por margen, pérdidas diarias, series de ventas, cobertura semanal y resultado de una promoción. Solo lecturas; no se registraron ventas ni se modificaron existencias o promociones.
+- Ollama Cloud real (`gemma4:31b`) desde Softy: ranking de cinco productos por ganancia, pérdidas diarias y comparación semanal. Las cifras de las gráficas se contrastaron con el backend. Ejemplos: primer producto del ranking, $4,183.20 del 3 al 9 de octubre; pérdidas, $1,697.21 del 4 al 10; la comparación del 4 al 10 contra el 27 de septiembre al 3 de octubre conserva los valores diarios de margen de ambas semanas.
+- Navegador integrado: revisión de Inicio, Ventas, Demanda, Personal y resultados de Promos. Vistas de Ventas y Demanda de 360 y 390 px, y ranking guardado de Softy a 390 px, sin ensanchar la página; las tendencias extensas se desplazan dentro de su tarjeta. No equivale a una prueba en un teléfono físico ni en Safari.
+- Evidencia local ignorada por Git: `output/inicio-grafica-color.png`, `output/graficas-movil.png`, `output/softy-ranking-colores.png` y `output/softy-tendencia-perdidas.png`.
+
+No se probó micrófono físico ni se desplegó esta actualización.

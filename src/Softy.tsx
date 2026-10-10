@@ -11,6 +11,7 @@ import type { MayaClient } from '../vendor/maya-portable/src/browser/client.js'
 import { api, useMocks, type Schema } from './api'
 import { appRoutes, writeActions, type ActionReview } from './softy-contract'
 import { Modal, Notice, PageTitle, useOnline } from './ui'
+import { SoftyChart } from './SoftyCharts'
 import '../vendor/maya-portable/src/react/styles.css'
 import './softy.css'
 
@@ -148,7 +149,7 @@ export default function Softy() {
         {softy.loading && <p className="softy-working" role="status">Softy está consultando tu sucursal…</p>}
         {preparing && <p className="softy-working" role="status">Preparando los datos para que los revises…</p>}
         {softy.screen && useMocks && <p className="field-help">Datos de ejemplo de la sucursal.</p>}
-        {softy.screen ? <>{softy.savedAt !== undefined && <p className="softy-saved-note">Interfaz guardada · {interfaceDate(softy.savedAt)}</p>}<p className="softy-answer">{softy.screen.assistantMessage}</p><A2UIRenderer key={`${softy.screen.screenId}:${softy.savedAt || ''}`} screen={softy.screen} loading={disabled || voice.listening} onAction={action => { void onAction(action) }} components={{ StockForm: BusinessForm, SaleForm: BusinessForm }} />{suggestions}</> : <div className="panel softy-start"><h2>Recomendaciones de hoy</h2>{suggestions}</div>}
+        {softy.screen ? <>{softy.savedAt !== undefined && <p className="softy-saved-note">Interfaz guardada · {interfaceDate(softy.savedAt)}</p>}<p className="softy-answer">{softy.screen.assistantMessage}</p><A2UIRenderer key={`${softy.screen.screenId}:${softy.savedAt || ''}`} screen={softy.screen} loading={disabled || voice.listening} onAction={action => { void onAction(action) }} components={{ StockForm: BusinessForm, SaleForm: BusinessForm, BarChart: SoftyChart, LineChart: SoftyChart }} />{suggestions}</> : <div className="panel softy-start"><h2>Recomendaciones de hoy</h2>{suggestions}</div>}
       </section>
     </div>
     {showHistory && <Modal title="Últimas interfaces" onClose={() => setShowHistory(false)}>

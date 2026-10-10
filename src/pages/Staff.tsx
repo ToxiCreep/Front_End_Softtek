@@ -5,7 +5,7 @@ import { Pencil, Plus, Sparkles, Trash2, Users } from 'lucide-react'
 import { api, exactMoney, money, quantity } from '../api'
 import { dias, hora, roles } from '../backend-types'
 import type { CoberturaRol, DiaPlantilla, Empleado, EmpleadoSolicitud, Plantilla, PlantillaSolicitud, RecomendacionPersonal, Rol } from '../backend-types'
-import { Empty, ErrorState, Loading, Modal, Notice, PageTitle, SectionHeading, useOnline } from '../ui'
+import { BarChart, Empty, ErrorState, Loading, Modal, Notice, PageTitle, SectionHeading, useOnline } from '../ui'
 
 const estados: Record<CoberturaRol['estado'], string> = { OK: 'Cubierto', JUSTO: 'Justo', DEFICIT: 'Faltan personas', EXCESO: 'Personal de más', SIN_DATOS: 'Sin datos' }
 const rolOptions = Object.entries(roles) as [Rol, string][]
@@ -44,8 +44,9 @@ export default function Staff() {
 
     <section className="panel page-section"><SectionHeading title="Cobertura por puesto" description="Horas que pide la plantilla contra las horas que pueden trabajar tus empleados activos." />
       {cobertura.isPending ? <Loading /> : cobertura.isError ? <ErrorState error={cobertura.error} retry={() => cobertura.refetch()} /> : !cobertura.data.length ? <Empty title="Sin datos de cobertura" description="Agrega empleados y bloques de plantilla." /> :
-        <div className="table-scroll"><table><thead><tr><th>Puesto</th><th>Horas requeridas</th><th>Horas disponibles</th><th>Pico simultáneo</th><th>Activos</th><th>Faltan</th><th>Estado</th></tr></thead>
-          <tbody>{cobertura.data.map(c => <tr key={c.rol}><td>{roles[c.rol]}</td><td>{quantity(c.horasRequeridas)}</td><td>{quantity(c.horasDisponibles)}</td><td>{c.picoSimultaneo}</td><td>{c.empleadosActivos}</td><td>{c.empleadosFaltantes}</td><td><span className={`status status-${c.estado.toLowerCase()}`}>{estados[c.estado]}</span></td></tr>)}</tbody></table></div>}
+        <><BarChart labels={cobertura.data.map(c => roles[c.rol])} series={[{ label: 'Horas requeridas', color: 'var(--chart-blue)', values: cobertura.data.map(c => c.horasRequeridas) }, { label: 'Horas disponibles', color: 'var(--chart-green)', values: cobertura.data.map(c => c.horasDisponibles) }]} unit="h" description="Horas requeridas y disponibles por puesto en la semana. No representa disponibilidad por turno." />
+          <details className="chart-table"><summary>Ver el detalle de cobertura</summary><div className="table-scroll"><table><thead><tr><th>Puesto</th><th>Horas requeridas</th><th>Horas disponibles</th><th>Pico simultáneo</th><th>Activos</th><th>Faltan</th><th>Estado</th></tr></thead>
+          <tbody>{cobertura.data.map(c => <tr key={c.rol}><td>{roles[c.rol]}</td><td>{quantity(c.horasRequeridas)}</td><td>{quantity(c.horasDisponibles)}</td><td>{c.picoSimultaneo}</td><td>{c.empleadosActivos}</td><td>{c.empleadosFaltantes}</td><td><span className={`status status-${c.estado.toLowerCase()}`}>{estados[c.estado]}</span></td></tr>)}</tbody></table></div></details></>}
     </section>
 
     <div className="filter-row"><label>Puesto<select value={rol} onChange={e => setRol(e.target.value as Rol | '')}><option value="">Todos los puestos</option>{rolOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
@@ -134,7 +135,7 @@ function Recomendar({ onClose, onSaved }: { onClose: () => void; onSaved: (messa
       {preview.isError && <Notice error message={preview.error.message} />}
       {r && <>
         <div className="result-grid"><div><span>Costo semanal estimado</span><strong>{money(r.costoSemanalEstimado)}</strong></div><div><span>Bloques propuestos</span><strong>{r.bloques.length}</strong></div><div><span>Tickets que atiende una persona por hora</span><strong>{r.transaccionesPorEmpleadoHora}</strong></div></div>
-        <div className="table-scroll"><table><thead><tr><th>Puesto</th><th>Horas-persona por semana</th></tr></thead><tbody>{Object.entries(r.horasPersonaPorRol).map(([k, v]) => <tr key={k}><td>{roles[k as Rol] ?? k}</td><td>{quantity(v)}</td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table><thead><tr><th>Puesto</th><th>Horas totales del personal</th></tr></thead><tbody>{Object.entries(r.horasPersonaPorRol).map(([k, v]) => <tr key={k}><td>{roles[k as Rol] ?? k}</td><td>{quantity(v)}</td></tr>)}</tbody></table></div>
         {r.notas.length > 0 && <ul className="note-list">{r.notas.map(n => <li key={n}>{n}</li>)}</ul>}
       </>}
       {save.isError && <Notice error message={save.error.message} />}

@@ -4,6 +4,7 @@ import type { Schema } from '../src/api.js'
 import { exactMoney, iaProviders, shiftDate, today } from '../src/api.js'
 import { appRoutes, type ActionReview } from '../src/softy-contract.js'
 import { adaptRequest, adaptResponse } from '../src/adapters.js'
+import type { ResumenAgrupado } from '../src/backend-types.js'
 
 export class HostError extends Error {
   constructor(message: string, public status = 400, public uncertain = false) { super(message) }
@@ -68,7 +69,21 @@ export function hostTools(host: Host): MayaTool[] {
       } },
     { name: 'get_sales', description: 'Ventas, ganancia bruta, tickets, pérdidas y serie diaria en pesos mexicanos. Periodo de hasta 31 días.',
       inputSchema: { type: 'object', properties: { desde: { type: 'string' }, hasta: { type: 'string' } }, additionalProperties: false },
-      execute: async args => { allowed(args, ['desde', 'hasta']); const query = dates(args); const [resumen, dias] = await Promise.all([host.call(`/dashboard/resumen?${query}`), host.call(`/ventas/resumen?${query}`)]); return { resumen, dias } } },
+      execute: async args => { allowed(args, ['desde', 'hasta']); const query = dates(args); const [resumen, dias] = await Promise.all([host.call(`/dashboard/resumen?${query}`), host.call(`/ventas/resumen?${query}&agrupar=dia`)]); return { resumen, dias } } },
+    { name: 'get_sales_breakdown', description: 'Rankings reales de ventas por producto o categoría. Devuelve hasta 10 grupos ordenados por ingresos, margen (ganancia bruta) o unidades. También compara días de la semana y horas. No extrapoles los grupos omitidos.',
+      inputSchema: { type: 'object', properties: { agrupar: { type: 'string', enum: ['producto', 'categoria', 'diaSemana', 'hora'] }, ordenar: { type: 'string', enum: ['ingresos', 'margen', 'unidades'] }, limite: { type: 'integer', minimum: 1, maximum: 10 }, desde: { type: 'string' }, hasta: { type: 'string' } }, additionalProperties: false },
+      execute: async args => {
+        allowed(args, ['agrupar', 'ordenar', 'limite', 'desde', 'hasta'])
+        const agrupar = args.agrupar ?? 'producto', ordenar = args.ordenar ?? 'ingresos', limite = args.limite ?? 5
+        if (typeof agrupar !== 'string' || typeof ordenar !== 'string' || !['producto', 'categoria', 'diaSemana', 'hora'].includes(agrupar) || !['ingresos', 'margen', 'unidades'].includes(ordenar)) throw new HostError('Selecciona una agrupación y una métrica de ventas válidas.')
+        if (typeof limite !== 'number' || !Number.isInteger(limite) || limite < 1 || limite > 10) throw new HostError('El ranking debe contener entre 1 y 10 grupos.')
+        const query = dates(args)
+        const rows = await host.call<ResumenAgrupado[]>(`/ventas/resumen?${query}&agrupar=${agrupar}`)
+        return { periodo: Object.fromEntries(new URLSearchParams(query)), agrupar, ordenar, totalGrupos: rows.length, filas: [...rows].sort((a, b) => b[ordenar as 'ingresos' | 'margen' | 'unidades'] - a[ordenar as 'ingresos' | 'margen' | 'unidades']).slice(0, limite) }
+      } },
+    { name: 'get_losses', description: 'Pérdidas reales por día, categoría y producto en pesos mexicanos, valuadas a costo. Solo muestra las series que devuelve la API; si falta porDia no inventes una tendencia.',
+      inputSchema: { type: 'object', properties: { desde: { type: 'string' }, hasta: { type: 'string' } }, additionalProperties: false },
+      execute: args => { allowed(args, ['desde', 'hasta']); return host.call(`/inventario/perdidas?${dates(args)}`) } },
     { name: 'get_promotions', description: 'Promociones con id, productoId, estado, explicación y vigencia. Consulta antes de proponer activarlas o descartarlas.',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false }, execute: args => { allowed(args, []); return host.call('/promociones') } },
     { name: 'get_demand', description: 'Estimaciones diarias de un producto. Consulta; no son ventas realizadas.',
