@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Pencil, Plus, Sparkles, Tag } from 'lucide-react'
+import { Check, Pencil, Plus, Sparkles, Tag, X } from 'lucide-react'
 import type { FormEvent } from 'react'
 import type { PromocionSolicitud } from '../backend-types'
 import { api, exactMoney, money, shiftDate, shortDate, today } from '../api'
@@ -31,14 +31,14 @@ export default function Promotions() {
   const filtered = promos.data?.filter(p => p.estado === filter) || []
   return <>
     <PageTitle title="Promociones" description="Revisa las sugerencias. Tú decides cuáles activar."><div className="heading-actions"><button className="button outlined" disabled={!online} onClick={() => setForm('nueva')}><Plus size={18} aria-hidden="true" />Crear promoción</button><button className="button primary" onClick={() => generate.mutate()} disabled={!online || generate.isPending}><Sparkles size={18} aria-hidden="true" />{generate.isPending ? 'Buscando sugerencias…' : 'Buscar sugerencias'}</button></div></PageTitle>
-    <div className="filter-row"><label>Máximo de sugerencias<select value={maxSugerencias} onChange={e => setMaxSugerencias(Number(e.target.value))}>{[5, 10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}</select></label><label>Días de vigencia a evaluar<select value={horizonte} onChange={e => setHorizonte(Number(e.target.value))}>{[7, 14, 30, 60].map(n => <option key={n} value={n}>{n} días</option>)}</select></label></div>
+    <div className="filter-row promotion-controls"><label>Máximo de sugerencias<select value={maxSugerencias} onChange={e => setMaxSugerencias(Number(e.target.value))}>{[5, 10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}</select></label><label>Días de vigencia a evaluar<select value={horizonte} onChange={e => setHorizonte(Number(e.target.value))}>{[7, 14, 30, 60].map(n => <option key={n} value={n}>{n} días</option>)}</select></label></div>
     {notice && <Notice message={notice} />}{generate.isError && <Notice error message={generate.error.message} />}
-    {promos.data && <section className="summary-grid" aria-label="Resumen de promociones">{[
-      { label: 'Total de promociones', value: promos.data.length, icon: Tag },
-      { label: 'Por revisar', value: promos.data.filter(p => p.estado === 'SUGERIDA').length, icon: Sparkles },
-      { label: 'Activas', value: promos.data.filter(p => p.estado === 'ACTIVA').length, icon: Check },
-    ].map(item => <article className="metric-card summary-stat" key={item.label}><span className="summary-icon blue"><item.icon size={22} aria-hidden="true" /></span><div><span>{item.label}</span><strong>{item.value}</strong></div></article>)}</section>}
-    <div className="promotion-tabs" aria-label="Estado de las promociones">{(['SUGERIDA', 'ACTIVA', 'FINALIZADA', 'RECHAZADA'] as const).map(state => <button key={state} aria-pressed={state === filter} onClick={() => setFilter(state)}>{state === 'SUGERIDA' ? 'Por revisar' : state === 'ACTIVA' ? 'Activas' : state === 'FINALIZADA' ? 'Finalizadas' : 'Descartadas'}<span>{promos.data?.filter(p => p.estado === state).length || 0}</span></button>)}</div>
+    {promos.data && <section className="summary-grid promotion-summary" aria-label="Estado de las promociones">{([
+      { state: 'SUGERIDA', label: 'Por revisar', icon: Sparkles },
+      { state: 'ACTIVA', label: 'Activas', icon: Check },
+      { state: 'FINALIZADA', label: 'Finalizadas', icon: Tag },
+      { state: 'RECHAZADA', label: 'Descartadas', icon: X },
+    ] as const).map(item => <button type="button" className="metric-card summary-stat promotion-filter" key={item.state} aria-pressed={filter === item.state} onClick={() => setFilter(item.state)}><span className="summary-icon blue"><item.icon size={22} aria-hidden="true" /></span><div><span>{item.label}</span><strong>{promos.data.filter(p => p.estado === item.state).length}</strong></div></button>)}</section>}
     {promos.isPending || products.isPending ? <Loading /> : promos.isError || products.isError ? <ErrorState error={promos.error || products.error} retry={() => { promos.refetch(); products.refetch() }} /> : !filtered.length ? <div className="panel"><Empty title={filter === 'ACTIVA' ? 'Todavía no tienes promociones activas' : 'No hay promociones en esta lista'} description={filter === 'ACTIVA' ? 'Revisa las sugerencias y activa la que te convenga.' : 'Puedes revisar otro estado o buscar nuevas sugerencias.'} /></div> : <div className="promotion-grid">{filtered.map(p => {
       const product = products.data?.find(item => item.id === p.productoId)
       const discounted = product ? p.tipo === 'PORCENTAJE' ? product.precioVenta * (1 - p.valor / 100) : p.tipo === 'PRECIO_FIJO' ? p.valor : product.precioVenta / 2 : null

@@ -42,6 +42,7 @@ export default function App() {
   }, [location.pathname])
   const date = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${today()}T12:00:00Z`))
   const saleAction = <Link to="/inventario?venta=true" className="button primary sale-action"><ReceiptText size={19} aria-hidden="true" />Registrar venta</Link>
+  const showMobileSale = location.pathname === '/' || location.pathname === '/ventas'
 
   const nav = (mobile = false) => <nav aria-label={mobile ? 'Navegación móvil' : 'Navegación principal'} className={mobile ? 'mobile-nav' : 'sidebar-nav'}>
     {navigation.map(n => <NavLink key={n.to} to={n.to} end={n.to === '/'}><n.icon size={21} aria-hidden="true" /><span>{n.label}</span>{!mobile && <ChevronRight className="nav-arrow" size={16} aria-hidden="true" />}</NavLink>)}
@@ -65,10 +66,10 @@ export default function App() {
         <div className="topbar-right"><span className="header-date">{date}</span><NavLink to="/softy" className="softy-entry"><span className="softy-avatar" aria-hidden="true" /><span>Softy</span></NavLink><button className="help-button" onClick={() => setHelp(true)}><CircleHelp size={19} aria-hidden="true" /><span>Ayuda</span></button></div>
       </header>
       {!online && <div className="offline-banner" role="alert"><WifiOff size={19} aria-hidden="true" />Sin conexión. Conéctate para guardar cambios.</div>}
-      <main id="main-content" tabIndex={-1}>
+      <main id="main-content" className={showMobileSale ? 'with-mobile-sale' : undefined} tabIndex={-1}>
         <Routes><Route path="/" element={<Dashboard />} /><Route path="/inventario" element={<Inventory />} /><Route path="/promociones" element={<Promotions />} /><Route path="/demanda" element={<Demand />} /><Route path="/ventas" element={<Sales />} /><Route path="/personal" element={<Staff />} /><Route path="/calendario" element={<Calendar />} /><Route path="/ajustes" element={<Settings />} /><Route path="/softy" element={<Softy />} /><Route path="*" element={<div className="empty"><h1>No encontramos esta página</h1><Link className="button primary" to="/">Volver al inicio</Link></div>} /></Routes>
       </main>
-      <div className="mobile-sale">{saleAction}</div>
+      {showMobileSale && <div className="mobile-sale">{saleAction}</div>}
       {nav(true)}
     </div>
     {help && <Modal title="Cómo usar la app" onClose={() => setHelp(false)}>
